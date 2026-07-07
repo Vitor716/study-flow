@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Study Flow</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="topbar-copy">
+                <p class="eyebrow">Study Flow</p>
+                <h1>Fluxo de estudos</h1>
+                <p class="topbar-subtitle">Organize assuntos, acompanhe progresso e mantenha o foco no proximo passo.</p>
+            </div>
+            <div class="topbar-actions">
+                <button class="ghost-button" id="refreshButton" type="button">Atualizar</button>
+                <button class="primary-button" id="openCreateModalButton" type="button">Novo estudo</button>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <section class="board-section" aria-label="Pipeline">
+                <div class="command-bar" aria-label="Controles do fluxo">
+                    <label class="search-field">
+                        <span>Buscar contexto</span>
+                        <input id="contextFilter" type="search" placeholder="Kotlin, Spring, SQL">
+                    </label>
+
+                    <label class="select-field">
+                        <span>Prioridade</span>
+                        <select id="priorityFilter">
+                            <option value="">Todas</option>
+                            <option value="ALTA">Alta</option>
+                            <option value="MEDIA">Media</option>
+                            <option value="BAIXA">Baixa</option>
+                        </select>
+                    </label>
+
+                    <div class="summary-strip" aria-label="Resumo dos cards">
+                        <div class="summary-item">
+                            <span>Total</span>
+                            <strong id="totalCards">0</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Visiveis</span>
+                            <strong id="visibleCardsLabel">0</strong>
+                        </div>
+                        <div class="summary-item high-priority">
+                            <span>Alta prioridade</span>
+                            <strong id="highPriorityCards">0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="board-toolbar">
+                    <div>
+                        <h2>Pipeline</h2>
+                        <p>Acompanhe cada assunto do primeiro gatilho ate a consolidacao do conhecimento.</p>
+                    </div>
+                    <div class="board-status" id="boardStatus" role="status">Carregando cards...</div>
+                </div>
+                <div class="board" id="board"></div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modalBackdrop" hidden>
+        <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Gatilho inicial</p>
+                    <h2 id="modalTitle">Novo estudo</h2>
+                    <p class="modal-subtitle">Registre o problema que iniciou o estudo.</p>
+                </div>
+                <button class="icon-button" id="closeModalButton" type="button" aria-label="Fechar">x</button>
+            </div>
+
+            <form id="createCardForm" novalidate>
+                <div class="form-grid">
+                    <label class="field wide">
+                        <span>Titulo</span>
+                        <input id="titleInput" name="titulo" type="text" maxlength="140" required>
+                        <small class="field-error" data-error-for="titulo"></small>
+                    </label>
+
+                    <label class="field">
+                        <span>Contexto</span>
+                        <input id="contextInput" name="contexto" type="text" maxlength="80" required>
+                        <small class="field-error" data-error-for="contexto"></small>
+                    </label>
+
+                    <label class="field">
+                        <span>Prioridade</span>
+                        <select id="priorityInput" name="prioridade" required>
+                            <option value="MEDIA">Media</option>
+                            <option value="ALTA">Alta</option>
+                            <option value="BAIXA">Baixa</option>
+                        </select>
+                        <small class="field-error" data-error-for="prioridade"></small>
+                    </label>
+
+                    <label class="field wide">
+                        <span>Descricao</span>
+                        <textarea id="descriptionInput" name="descricao" rows="4"></textarea>
+                    </label>
+
+                    <label class="field">
+                        <span>Linguagens</span>
+                        <input id="languagesInput" name="linguagens" type="text" placeholder="Kotlin, SQL">
+                    </label>
+
+                    <label class="field">
+                        <span>Tipos</span>
+                        <input id="typesInput" name="tipos" type="text" placeholder="endpoint, refatoracao">
+                    </label>
+                </div>
+
+                <div class="form-feedback" id="formFeedback" role="alert"></div>
+
+                <div class="modal-actions">
+                    <button class="ghost-button" id="cancelCreateButton" type="button">Cancelar</button>
+                    <button class="primary-button" type="submit">Criar estudo</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <script src="/app.js" defer></script>
+</body>
+</html>
