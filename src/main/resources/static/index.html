@@ -72,7 +72,7 @@
                 <div>
                     <p class="eyebrow">Gatilho inicial</p>
                     <h2 id="modalTitle">Novo estudo</h2>
-                    <p class="modal-subtitle">Registre o problema que iniciou o estudo.</p>
+                    <p class="modal-subtitle" id="modalSubtitle">Registre o problema que iniciou o estudo.</p>
                 </div>
                 <button class="icon-button" id="closeModalButton" type="button" aria-label="Fechar">x</button>
             </div>
@@ -121,7 +121,7 @@
 
                 <div class="modal-actions">
                     <button class="ghost-button" id="cancelCreateButton" type="button">Cancelar</button>
-                    <button class="primary-button" type="submit">Criar estudo</button>
+                    <button class="primary-button" id="saveCardButton" type="submit">Criar estudo</button>
                 </div>
             </form>
         </section>
@@ -150,6 +150,10 @@
                     </div>
                 </div>
 
+                <div class="soft-warning" id="moveEvidenceWarning" hidden>
+                    Este card ainda nao tem evidencia ativa. Avancar agora pode virar estudo passivo.
+                </div>
+
                 <label class="field wide">
                     <span>Motivo opcional</span>
                     <textarea id="moveReasonInput" name="razao" rows="4" placeholder="O que mudou no estudo?"></textarea>
@@ -162,6 +166,102 @@
                     <button class="primary-button" type="submit">Confirmar movimento</button>
                 </div>
             </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="detailModalBackdrop" hidden>
+        <section class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow" id="detailModalContext">Detalhe</p>
+                    <h2 id="detailModalTitle">Estudo</h2>
+                    <p class="modal-subtitle" id="detailModalSubtitle"></p>
+                </div>
+                <div class="modal-header-actions">
+                    <button class="ghost-button" id="editCardButton" type="button">Editar dados</button>
+                    <button class="icon-button" id="closeDetailModalButton" type="button" aria-label="Fechar">x</button>
+                </div>
+            </div>
+
+            <div class="detail-progress" aria-label="Progresso do card">
+                <div class="progress-label-row">
+                    <span id="detailProgressLabel">Progresso</span>
+                    <strong id="detailProgressValue">0%</strong>
+                </div>
+                <div class="progress-track">
+                    <span id="detailProgressBar"></span>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <section class="detail-panel">
+                    <div class="panel-header">
+                        <h3>Recursos</h3>
+                        <span id="resourcesCount">0</span>
+                    </div>
+                    <div class="detail-list" id="resourcesList"></div>
+                    <form class="stacked-form" id="resourceForm">
+                        <label class="field">
+                            <span>Tipo</span>
+                            <select id="resourceTypeInput" name="tipo" required>
+                                <option value="VIDEO">Video</option>
+                                <option value="ARTIGO">Artigo</option>
+                                <option value="CURSO">Curso</option>
+                                <option value="LIVRO">Livro</option>
+                                <option value="DOCUMENTACAO">Documentacao</option>
+                                <option value="BUG">Bug</option>
+                                <option value="TAREFA">Tarefa</option>
+                                <option value="OUTRO">Outro</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Titulo</span>
+                            <input id="resourceTitleInput" name="titulo" type="text" maxlength="140" required>
+                        </label>
+                        <label class="field">
+                            <span>URL</span>
+                            <input id="resourceUrlInput" name="url" type="url" placeholder="https://">
+                        </label>
+                        <label class="field">
+                            <span>Observacoes</span>
+                            <textarea id="resourceNotesInput" name="observacoes" rows="3"></textarea>
+                        </label>
+                        <button class="primary-button" type="submit">Adicionar recurso</button>
+                    </form>
+                </section>
+
+                <section class="detail-panel">
+                    <div class="panel-header">
+                        <h3>Evidencias ativas</h3>
+                        <span id="evidenceCount">0</span>
+                    </div>
+                    <div class="detail-list" id="evidenceList"></div>
+                    <form class="stacked-form" id="evidenceForm">
+                        <label class="field">
+                            <span>Tipo</span>
+                            <select id="evidenceTypeInput" name="tipo" required>
+                                <option value="TEXTO">Texto</option>
+                                <option value="CODIGO">Codigo</option>
+                                <option value="PERGUNTA_RESPOSTA">Pergunta e resposta</option>
+                                <option value="DECISAO_TECNICA">Decisao tecnica</option>
+                                <option value="RESUMO_ATIVO">Resumo ativo</option>
+                                <option value="CHECKLIST">Checklist</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Titulo</span>
+                            <input id="evidenceTitleInput" name="titulo" type="text" maxlength="140" required>
+                        </label>
+                        <label class="field">
+                            <span>Conteudo</span>
+                            <textarea id="evidenceContentInput" name="conteudo" rows="6" required></textarea>
+                        </label>
+                        <button class="primary-button" type="submit">Adicionar evidencia</button>
+                    </form>
+                </section>
+            </div>
+
+            <div class="form-feedback" id="detailFormFeedback" role="alert"></div>
         </section>
     </div>
 

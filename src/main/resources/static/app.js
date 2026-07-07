@@ -1,22 +1,28 @@
 const API = {
     cards: "/api/study-card",
-    stageHistory: "/api/stage-history"
+    stageHistory: "/api/stage-history",
+    resources: (cardId) => `/api/cards/${cardId}/resources`,
+    evidence: (cardId) => `/api/cards/${cardId}/evidence`
 };
 
 const STAGES = [
-    { key: "GATILHO", label: "Gatilho", hint: "Problema percebido" },
-    { key: "CAPTURA", label: "Captura", hint: "Escopo e materiais" },
-    { key: "ESTUDO_ATIVO", label: "Estudo ativo", hint: "Entendimento guiado" },
-    { key: "APLICACAO", label: "Aplicacao", hint: "Codigo ou entrega" },
-    { key: "REFINAMENTO", label: "Refinamento", hint: "Nota e ajuste fino" },
-    { key: "CONSOLIDACAO", label: "Consolidacao", hint: "Flashcards e revisao" },
-    { key: "ABSORVIDO", label: "Absorvido", hint: "Retencao validada" }
+    { key: "GATILHO", label: "Gatilho", hint: "Problema percebido", detail: "Capture o gatilho: bug, duvida, requisito ou lacuna que iniciou o estudo.", color: "#ff8d7a" },
+    { key: "CAPTURA", label: "Captura", hint: "Escopo e materiais", detail: "Defina o recorte e junte links, docs, cursos ou referencias para estudar.", color: "#f0b65d" },
+    { key: "ESTUDO_ATIVO", label: "Estudo ativo", hint: "Entendimento guiado", detail: "Leia, compare, teste hipoteses e produza explicacoes com suas palavras.", color: "#8fb5ff" },
+    { key: "APLICACAO", label: "Aplicacao", hint: "Codigo ou entrega", detail: "Transforme o estudo em snippet, endpoint, teste, refatoracao ou decisao tecnica.", color: "#9a8cff" },
+    { key: "REFINAMENTO", label: "Refinamento", hint: "Nota e ajuste fino", detail: "Revise a saida, remova ruido e registre evidencias ativas antes de consolidar.", color: "#e184c5" },
+    { key: "CONSOLIDACAO", label: "Consolidacao", hint: "Flashcards e revisao", detail: "Converta o aprendizado em revisao, flashcards ou criterio de uso futuro.", color: "#78d6a3" },
+    { key: "ABSORVIDO", label: "Absorvido", hint: "Retencao validada", detail: "Marque quando conseguir recuperar e transferir o conhecimento sem consulta direta.", color: "#8fd7d2" }
 ];
 
 const state = {
     cards: [],
     draggedCardId: null,
     pendingMove: null,
+    activeCard: null,
+    editingCardId: null,
+    resources: [],
+    evidence: [],
     filters: {
         context: "",
         priority: ""
@@ -34,9 +40,12 @@ const elements = {
     refreshButton: document.querySelector("#refreshButton"),
     openCreateModalButton: document.querySelector("#openCreateModalButton"),
     modalBackdrop: document.querySelector("#modalBackdrop"),
+    modalTitle: document.querySelector("#modalTitle"),
+    modalSubtitle: document.querySelector("#modalSubtitle"),
     closeModalButton: document.querySelector("#closeModalButton"),
     cancelCreateButton: document.querySelector("#cancelCreateButton"),
     createCardForm: document.querySelector("#createCardForm"),
+    saveCardButton: document.querySelector("#saveCardButton"),
     titleInput: document.querySelector("#titleInput"),
     contextInput: document.querySelector("#contextInput"),
     priorityInput: document.querySelector("#priorityInput"),
@@ -51,8 +60,32 @@ const elements = {
     moveModalSubtitle: document.querySelector("#moveModalSubtitle"),
     moveFromStage: document.querySelector("#moveFromStage"),
     moveToStage: document.querySelector("#moveToStage"),
+    moveEvidenceWarning: document.querySelector("#moveEvidenceWarning"),
     moveReasonInput: document.querySelector("#moveReasonInput"),
-    moveFormFeedback: document.querySelector("#moveFormFeedback")
+    moveFormFeedback: document.querySelector("#moveFormFeedback"),
+    detailModalBackdrop: document.querySelector("#detailModalBackdrop"),
+    editCardButton: document.querySelector("#editCardButton"),
+    closeDetailModalButton: document.querySelector("#closeDetailModalButton"),
+    detailModalContext: document.querySelector("#detailModalContext"),
+    detailModalTitle: document.querySelector("#detailModalTitle"),
+    detailModalSubtitle: document.querySelector("#detailModalSubtitle"),
+    detailProgressLabel: document.querySelector("#detailProgressLabel"),
+    detailProgressValue: document.querySelector("#detailProgressValue"),
+    detailProgressBar: document.querySelector("#detailProgressBar"),
+    resourcesCount: document.querySelector("#resourcesCount"),
+    resourcesList: document.querySelector("#resourcesList"),
+    resourceForm: document.querySelector("#resourceForm"),
+    resourceTypeInput: document.querySelector("#resourceTypeInput"),
+    resourceTitleInput: document.querySelector("#resourceTitleInput"),
+    resourceUrlInput: document.querySelector("#resourceUrlInput"),
+    resourceNotesInput: document.querySelector("#resourceNotesInput"),
+    evidenceCount: document.querySelector("#evidenceCount"),
+    evidenceList: document.querySelector("#evidenceList"),
+    evidenceForm: document.querySelector("#evidenceForm"),
+    evidenceTypeInput: document.querySelector("#evidenceTypeInput"),
+    evidenceTitleInput: document.querySelector("#evidenceTitleInput"),
+    evidenceContentInput: document.querySelector("#evidenceContentInput"),
+    detailFormFeedback: document.querySelector("#detailFormFeedback")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -68,6 +101,8 @@ function bindEvents() {
     elements.cancelCreateButton.addEventListener("click", closeModal);
     elements.closeMoveModalButton.addEventListener("click", closeMoveModal);
     elements.cancelMoveButton.addEventListener("click", closeMoveModal);
+    elements.editCardButton.addEventListener("click", openEditCardModal);
+    elements.closeDetailModalButton.addEventListener("click", closeDetailModal);
     elements.modalBackdrop.addEventListener("click", (event) => {
         if (event.target === elements.modalBackdrop) {
             closeModal();
@@ -76,6 +111,11 @@ function bindEvents() {
     elements.moveModalBackdrop.addEventListener("click", (event) => {
         if (event.target === elements.moveModalBackdrop) {
             closeMoveModal();
+        }
+    });
+    elements.detailModalBackdrop.addEventListener("click", (event) => {
+        if (event.target === elements.detailModalBackdrop) {
+            closeDetailModal();
         }
     });
 
@@ -89,8 +129,11 @@ function bindEvents() {
         renderBoard();
     });
 
-    elements.createCardForm.addEventListener("submit", createCard);
+    elements.createCardForm.addEventListener("submit", saveCard);
     elements.moveCardForm.addEventListener("submit", confirmPendingMove);
+    elements.resourceForm.addEventListener("submit", createResource);
+    elements.evidenceForm.addEventListener("submit", createEvidence);
+    elements.board.addEventListener("click", handleBoardClick);
     elements.board.addEventListener("dragstart", handleDragStart);
     elements.board.addEventListener("dragend", handleDragEnd);
     elements.board.addEventListener("dragover", handleDragOver);
@@ -108,6 +151,10 @@ function bindEvents() {
 
         if (!elements.moveModalBackdrop.hidden) {
             closeMoveModal();
+        }
+
+        if (!elements.detailModalBackdrop.hidden) {
+            closeDetailModal();
         }
     });
 }
@@ -162,7 +209,7 @@ async function loadCards() {
     }
 }
 
-async function createCard(event) {
+async function saveCard(event) {
     event.preventDefault();
     clearFormErrors();
 
@@ -177,8 +224,9 @@ async function createCard(event) {
     elements.formFeedback.textContent = "";
 
     try {
-        const response = await fetch(API.cards, {
-            method: "POST",
+        const isEditing = state.editingCardId !== null;
+        const response = await fetch(isEditing ? `${API.cards}/${state.editingCardId}` : API.cards, {
+            method: isEditing ? "PUT" : "POST",
             headers: {
                 "Content-Type": "application/json",
                 Accept: "application/json"
@@ -187,26 +235,36 @@ async function createCard(event) {
         });
 
         if (!response.ok) {
-            throw new Error("Revise os dados e tente novamente.");
+            throw new Error(`Revise os dados e tente ${isEditing ? "salvar" : "criar"} novamente.`);
         }
 
-        const createdCard = await response.json();
-        state.cards = [createdCard, ...state.cards];
+        const savedCard = await response.json();
+        if (isEditing) {
+            state.cards = state.cards.map((card) => card.id === savedCard.id ? savedCard : card);
+            state.activeCard = savedCard;
+            setBoardStatus(`"${savedCard.titulo}" atualizado.`);
+        } else {
+            state.cards = [savedCard, ...state.cards];
+        }
         closeModal();
         renderBoard();
     } catch (error) {
-        elements.formFeedback.textContent = `Nao foi possivel criar o estudo. ${error.message}`;
+        elements.formFeedback.textContent = `Nao foi possivel salvar o estudo. ${error.message}`;
     }
 }
 
 function buildPayload() {
+    const editingCard = state.editingCardId !== null
+        ? state.cards.find((card) => card.id === state.editingCardId)
+        : null;
+
     return {
         titulo: elements.titleInput.value.trim(),
         contexto: elements.contextInput.value.trim(),
         prioridade: elements.priorityInput.value,
         descricao: emptyToNull(elements.descriptionInput.value),
-        estagio: "GATILHO",
-        orderIndex: 0,
+        estagio: editingCard?.estagio || "GATILHO",
+        orderIndex: editingCard?.orderIndex || 0,
         tags: [
             ...parseTags(elements.languagesInput.value, "LINGUAGEM"),
             ...parseTags(elements.typesInput.value, "TIPO")
@@ -280,10 +338,15 @@ function renderBoard() {
         const column = document.createElement("article");
         column.className = "stage-column";
         column.dataset.stage = stage.key;
+        column.style.setProperty("--stage-color", stage.color);
         column.innerHTML = `
             <header class="stage-header">
                 <div>
-                    <h3 class="stage-title">${stage.label}</h3>
+                    <h3 class="stage-title">
+                        <span>${stage.label}</span>
+                        <button class="tooltip-button" type="button" aria-label="${escapeHtml(stage.detail)}">?</button>
+                        <span class="stage-tooltip" role="tooltip">${escapeHtml(stage.detail)}</span>
+                    </h3>
                     <p class="stage-hint">${stage.hint}</p>
                 </div>
                 <span class="stage-count">${cards.length}</span>
@@ -320,6 +383,7 @@ function renderCard(card) {
     const description = card.descricao
         ? `<p class="card-description">${escapeHtml(card.descricao)}</p>`
         : "";
+    const progress = cardProgress(card.estagio);
 
     article.innerHTML = `
         <div class="card-topline">
@@ -332,9 +396,31 @@ function renderCard(card) {
             <span class="pill priority-${card.prioridade.toLowerCase()}">${priorityLabel(card.prioridade)}</span>
             ${renderTagPills(card.tags)}
         </div>
+        <div class="card-progress" aria-label="Progresso ${progress.percent}%">
+            <div class="progress-label-row">
+                <span>${stageLabel(card.estagio)}</span>
+                <strong>${progress.percent}%</strong>
+            </div>
+            <div class="progress-track"><span style="width: ${progress.percent}%"></span></div>
+        </div>
+        <button class="card-detail-button" type="button">Detalhes</button>
     `;
 
     return article;
+}
+
+function handleBoardClick(event) {
+    const button = event.target.closest(".card-detail-button");
+    if (!button) {
+        return;
+    }
+
+    const cardElement = button.closest(".study-card");
+    const card = state.cards.find((item) => item.id === Number(cardElement?.dataset.cardId));
+
+    if (card) {
+        openCardDetail(card);
+    }
 }
 
 function handleDragStart(event) {
@@ -388,7 +474,7 @@ function handleDragLeave(event) {
     column.classList.remove("is-drop-target");
 }
 
-function handleDrop(event) {
+async function handleDrop(event) {
     const column = event.target.closest(".stage-column");
     if (!column) {
         return;
@@ -405,16 +491,23 @@ function handleDrop(event) {
         return;
     }
 
-    openMoveModal(card, targetStage);
+    await openMoveModal(card, targetStage);
 }
 
-function openMoveModal(card, targetStage) {
+async function openMoveModal(card, targetStage) {
     state.pendingMove = { card, targetStage };
     elements.moveModalSubtitle.textContent = card.titulo;
     elements.moveFromStage.textContent = stageLabel(card.estagio);
     elements.moveToStage.textContent = stageLabel(targetStage);
     elements.moveReasonInput.value = "";
     elements.moveFormFeedback.textContent = "";
+    elements.moveEvidenceWarning.hidden = true;
+
+    if (targetStage === "REFINAMENTO") {
+        const evidence = await fetchEvidence(card.id);
+        elements.moveEvidenceWarning.hidden = evidence.length > 0;
+    }
+
     elements.moveModalBackdrop.hidden = false;
     elements.moveReasonInput.focus();
 }
@@ -423,7 +516,200 @@ function closeMoveModal() {
     elements.moveModalBackdrop.hidden = true;
     elements.moveCardForm.reset();
     elements.moveFormFeedback.textContent = "";
+    elements.moveEvidenceWarning.hidden = true;
     state.pendingMove = null;
+}
+
+async function openCardDetail(card) {
+    state.activeCard = card;
+    elements.detailModalContext.textContent = card.contexto;
+    elements.detailModalTitle.textContent = card.titulo;
+    elements.detailModalSubtitle.textContent = card.descricao || "Registre recursos consultados e evidencias produzidas.";
+    elements.detailFormFeedback.textContent = "";
+    elements.resourceForm.reset();
+    elements.evidenceForm.reset();
+    renderDetailProgress(card);
+    elements.detailModalBackdrop.hidden = false;
+    await loadCardArtifacts(card.id);
+}
+
+function closeDetailModal() {
+    elements.detailModalBackdrop.hidden = true;
+    elements.resourceForm.reset();
+    elements.evidenceForm.reset();
+    elements.detailFormFeedback.textContent = "";
+    state.activeCard = null;
+    state.resources = [];
+    state.evidence = [];
+}
+
+async function loadCardArtifacts(cardId) {
+    elements.resourcesList.innerHTML = `<div class="empty-stage">Carregando recursos...</div>`;
+    elements.evidenceList.innerHTML = `<div class="empty-stage">Carregando evidencias...</div>`;
+
+    try {
+        const [resources, evidence] = await Promise.all([
+            fetchResources(cardId),
+            fetchEvidence(cardId)
+        ]);
+
+        state.resources = resources;
+        state.evidence = evidence;
+        renderResources();
+        renderEvidence();
+    } catch (error) {
+        elements.detailFormFeedback.textContent = `Nao foi possivel carregar o detalhe. ${error.message}`;
+    }
+}
+
+async function fetchResources(cardId) {
+    const response = await fetch(API.resources(cardId), { headers: { Accept: "application/json" } });
+
+    if (!response.ok) {
+        throw new Error("Tente abrir o detalhe novamente.");
+    }
+
+    return response.json();
+}
+
+async function fetchEvidence(cardId) {
+    const response = await fetch(API.evidence(cardId), { headers: { Accept: "application/json" } });
+
+    if (!response.ok) {
+        throw new Error("Tente consultar as evidencias novamente.");
+    }
+
+    return response.json();
+}
+
+async function createResource(event) {
+    event.preventDefault();
+
+    if (!state.activeCard) {
+        return;
+    }
+
+    const payload = {
+        cardId: state.activeCard.id,
+        tipo: elements.resourceTypeInput.value,
+        titulo: elements.resourceTitleInput.value.trim(),
+        url: emptyToNull(elements.resourceUrlInput.value),
+        observacoes: emptyToNull(elements.resourceNotesInput.value)
+    };
+
+    if (!payload.titulo) {
+        elements.detailFormFeedback.textContent = "Informe o titulo do recurso.";
+        elements.resourceTitleInput.focus();
+        return;
+    }
+
+    const saved = await postArtifact(API.resources(state.activeCard.id), payload, elements.resourceForm);
+    if (!saved) {
+        return;
+    }
+
+    state.resources = await fetchResources(state.activeCard.id);
+    renderResources();
+}
+
+async function createEvidence(event) {
+    event.preventDefault();
+
+    if (!state.activeCard) {
+        return;
+    }
+
+    const payload = {
+        cardId: state.activeCard.id,
+        tipo: elements.evidenceTypeInput.value,
+        titulo: elements.evidenceTitleInput.value.trim(),
+        conteudo: elements.evidenceContentInput.value.trim()
+    };
+
+    if (!payload.titulo || !payload.conteudo) {
+        elements.detailFormFeedback.textContent = "Informe titulo e conteudo da evidencia.";
+        (!payload.titulo ? elements.evidenceTitleInput : elements.evidenceContentInput).focus();
+        return;
+    }
+
+    const saved = await postArtifact(API.evidence(state.activeCard.id), payload, elements.evidenceForm);
+    if (!saved) {
+        return;
+    }
+
+    state.evidence = await fetchEvidence(state.activeCard.id);
+    renderEvidence();
+}
+
+async function postArtifact(url, payload, form) {
+    elements.detailFormFeedback.textContent = "";
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        elements.detailFormFeedback.textContent = "Nao foi possivel salvar. Revise os dados e tente novamente.";
+        return false;
+    }
+
+    form.reset();
+    return true;
+}
+
+function renderResources() {
+    elements.resourcesCount.textContent = state.resources.length;
+
+    if (state.resources.length === 0) {
+        elements.resourcesList.innerHTML = `<div class="empty-stage">Nenhum recurso registrado</div>`;
+        return;
+    }
+
+    elements.resourcesList.innerHTML = state.resources
+        .map((resource) => `
+            <article class="artifact-item">
+                <div>
+                    <span class="artifact-type">${resourceTypeLabel(resource.tipo)}</span>
+                    <h4>${escapeHtml(resource.titulo)}</h4>
+                    ${resource.observacoes ? `<p>${escapeHtml(resource.observacoes)}</p>` : ""}
+                </div>
+                ${resource.url ? `<a href="${escapeHtml(resource.url)}" target="_blank" rel="noreferrer">Abrir</a>` : ""}
+            </article>
+        `)
+        .join("");
+}
+
+function renderEvidence() {
+    elements.evidenceCount.textContent = state.evidence.length;
+
+    if (state.evidence.length === 0) {
+        elements.evidenceList.innerHTML = `<div class="empty-stage">Nenhuma evidencia registrada</div>`;
+        return;
+    }
+
+    elements.evidenceList.innerHTML = state.evidence
+        .map((evidence) => `
+            <article class="artifact-item">
+                <div>
+                    <span class="artifact-type">${evidenceTypeLabel(evidence.tipo)}</span>
+                    <h4>${escapeHtml(evidence.titulo)}</h4>
+                    <p class="${evidence.tipo === "CODIGO" ? "code-evidence" : ""}">${escapeHtml(evidence.conteudo)}</p>
+                </div>
+            </article>
+        `)
+        .join("");
+}
+
+function renderDetailProgress(card) {
+    const progress = cardProgress(card.estagio);
+    elements.detailProgressLabel.textContent = stageLabel(card.estagio);
+    elements.detailProgressValue.textContent = `${progress.percent}%`;
+    elements.detailProgressBar.style.width = `${progress.percent}%`;
 }
 
 async function confirmPendingMove(event) {
@@ -487,6 +773,14 @@ function stageLabel(stageKey) {
     return STAGES.find((stage) => stage.key === stageKey)?.label || stageKey;
 }
 
+function cardProgress(stageKey) {
+    const stageIndex = STAGES.findIndex((stage) => stage.key === stageKey);
+    const safeIndex = stageIndex >= 0 ? stageIndex : 0;
+    const percent = Math.round(((safeIndex + 1) / STAGES.length) * 100);
+
+    return { index: safeIndex, percent };
+}
+
 function priorityLabel(priority) {
     const labels = {
         ALTA: "Alta",
@@ -497,11 +791,68 @@ function priorityLabel(priority) {
     return labels[priority] || priority;
 }
 
+function resourceTypeLabel(type) {
+    const labels = {
+        VIDEO: "Video",
+        ARTIGO: "Artigo",
+        CURSO: "Curso",
+        LIVRO: "Livro",
+        DOCUMENTACAO: "Documentacao",
+        BUG: "Bug",
+        TAREFA: "Tarefa",
+        OUTRO: "Outro"
+    };
+
+    return labels[type] || type;
+}
+
+function evidenceTypeLabel(type) {
+    const labels = {
+        TEXTO: "Texto",
+        CODIGO: "Codigo",
+        PERGUNTA_RESPOSTA: "Pergunta e resposta",
+        DECISAO_TECNICA: "Decisao tecnica",
+        RESUMO_ATIVO: "Resumo ativo",
+        CHECKLIST: "Checklist"
+    };
+
+    return labels[type] || type;
+}
+
 function setBoardStatus(message) {
     elements.boardStatus.textContent = message;
 }
 
 function openModal() {
+    state.editingCardId = null;
+    elements.modalTitle.textContent = "Novo estudo";
+    elements.modalSubtitle.textContent = "Registre o problema que iniciou o estudo.";
+    elements.saveCardButton.textContent = "Criar estudo";
+    elements.createCardForm.reset();
+    elements.priorityInput.value = "MEDIA";
+    clearFormErrors();
+    elements.modalBackdrop.hidden = false;
+    elements.titleInput.focus();
+}
+
+function openEditCardModal() {
+    if (!state.activeCard) {
+        return;
+    }
+
+    const card = state.activeCard;
+    state.editingCardId = card.id;
+    elements.modalTitle.textContent = "Editar estudo";
+    elements.modalSubtitle.textContent = "Ajuste titulo, contexto, prioridade, descricao e tags.";
+    elements.saveCardButton.textContent = "Salvar alteracoes";
+    elements.titleInput.value = card.titulo;
+    elements.contextInput.value = card.contexto;
+    elements.priorityInput.value = card.prioridade;
+    elements.descriptionInput.value = card.descricao || "";
+    elements.languagesInput.value = tagsByCategory(card.tags, "LINGUAGEM");
+    elements.typesInput.value = tagsByCategory(card.tags, "TIPO");
+    clearFormErrors();
+    closeDetailModal();
     elements.modalBackdrop.hidden = false;
     elements.titleInput.focus();
 }
@@ -510,7 +861,18 @@ function closeModal() {
     elements.modalBackdrop.hidden = true;
     elements.createCardForm.reset();
     elements.priorityInput.value = "MEDIA";
+    state.editingCardId = null;
+    elements.modalTitle.textContent = "Novo estudo";
+    elements.modalSubtitle.textContent = "Registre o problema que iniciou o estudo.";
+    elements.saveCardButton.textContent = "Criar estudo";
     clearFormErrors();
+}
+
+function tagsByCategory(tags = [], category) {
+    return tags
+        .filter((tag) => tag.categoria === category)
+        .map((tag) => tag.valor)
+        .join(", ");
 }
 
 function escapeHtml(value) {
