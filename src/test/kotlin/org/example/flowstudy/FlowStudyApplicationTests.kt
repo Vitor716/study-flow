@@ -1,13 +1,14 @@
 package org.example.flowstudy
 
-import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@SpringBootTest
 class FlowStudyApplicationTests {
-
     @Test
-    fun contextLoads() {
-    }
+    fun defaultConfigurationUsesLocalPortAndDatabase() {
+        val config = AppConfig.fromEnvironment(emptyMap())
 
+        assertEquals(8732, config.port)
+        assertEquals("jdbc:sqlite:flow-study.db", config.databaseUrl)
+    }
 }

@@ -1,14 +1,14 @@
 plugins {
     kotlin("jvm") version "2.2.21"
-    kotlin("plugin.spring") version "2.2.21"
-    kotlin("plugin.allopen") version "2.2.21"
-    id("org.springframework.boot") version "4.1.0"
-    id("io.spring.dependency-management") version "1.1.7"
+    application
 }
 
 group = "org.example"
 version = "0.0.1-SNAPSHOT"
 description = "flow-study"
+
+val ktorVersion = "3.3.0"
+val flywayVersion = "12.4.0"
 
 java {
     toolchain {
@@ -21,36 +21,54 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-flyway")
-    implementation("org.springframework.boot:spring-boot-starter-webmvc")
-    implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.hibernate.orm:hibernate-community-dialects")
-    implementation(kotlin("stdlib"))
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("tools.jackson.module:jackson-module-kotlin")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    runtimeOnly("org.xerial:sqlite-jdbc")
-    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-jackson-jvm:$ktorVersion")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.1")
+    implementation("ch.qos.logback:logback-classic:1.5.22")
+    implementation("org.flywaydb:flyway-core:$flywayVersion")
+    implementation("org.xerial:sqlite-jdbc:3.53.2.0")
+
+    testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+application {
+    mainClass = "org.example.flowstudy.FlowStudyApplicationKt"
+}
+
 kotlin {
+    sourceSets {
+        main {
+            kotlin.exclude("org/example/flowstudy/studycard/**")
+        }
+    }
     compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+        freeCompilerArgs.addAll("-Xjsr305=strict")
     }
 }
 
-allOpen {
-    annotation("jakarta.persistence.Entity")
-    annotation("jakarta.persistence.MappedSuperclass")
-    annotation("jakarta.persistence.Embeddable")
+tasks.jar {
+    archiveFileName = "study-flow.jar"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["Main-Class"] = application.mainClass.get()
+    }
+    from({
+        configurations.runtimeClasspath.get()
+            .filter { it.name.endsWith(".jar") }
+            .map { zipTree(it) }
+    })
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.register("localBuild") {
+    group = "build"
+    description = "Builds the runnable local jar at build/libs/study-flow.jar."
+    dependsOn("build")
 }
