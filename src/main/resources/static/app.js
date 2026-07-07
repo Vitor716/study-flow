@@ -1,5 +1,6 @@
 const API = {
-    cards: "/api/study-card"
+    cards: "/api/study-card",
+    stageHistory: "/api/stage-history"
 };
 
 const STAGES = [
@@ -14,6 +15,8 @@ const STAGES = [
 
 const state = {
     cards: [],
+    draggedCardId: null,
+    pendingMove: null,
     filters: {
         context: "",
         priority: ""
@@ -40,7 +43,16 @@ const elements = {
     descriptionInput: document.querySelector("#descriptionInput"),
     languagesInput: document.querySelector("#languagesInput"),
     typesInput: document.querySelector("#typesInput"),
-    formFeedback: document.querySelector("#formFeedback")
+    formFeedback: document.querySelector("#formFeedback"),
+    moveModalBackdrop: document.querySelector("#moveModalBackdrop"),
+    closeMoveModalButton: document.querySelector("#closeMoveModalButton"),
+    cancelMoveButton: document.querySelector("#cancelMoveButton"),
+    moveCardForm: document.querySelector("#moveCardForm"),
+    moveModalSubtitle: document.querySelector("#moveModalSubtitle"),
+    moveFromStage: document.querySelector("#moveFromStage"),
+    moveToStage: document.querySelector("#moveToStage"),
+    moveReasonInput: document.querySelector("#moveReasonInput"),
+    moveFormFeedback: document.querySelector("#moveFormFeedback")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -54,9 +66,16 @@ function bindEvents() {
     elements.openCreateModalButton.addEventListener("click", openModal);
     elements.closeModalButton.addEventListener("click", closeModal);
     elements.cancelCreateButton.addEventListener("click", closeModal);
+    elements.closeMoveModalButton.addEventListener("click", closeMoveModal);
+    elements.cancelMoveButton.addEventListener("click", closeMoveModal);
     elements.modalBackdrop.addEventListener("click", (event) => {
         if (event.target === elements.modalBackdrop) {
             closeModal();
+        }
+    });
+    elements.moveModalBackdrop.addEventListener("click", (event) => {
+        if (event.target === elements.moveModalBackdrop) {
+            closeMoveModal();
         }
     });
 
@@ -71,12 +90,56 @@ function bindEvents() {
     });
 
     elements.createCardForm.addEventListener("submit", createCard);
+    elements.moveCardForm.addEventListener("submit", confirmPendingMove);
+    elements.board.addEventListener("dragstart", handleDragStart);
+    elements.board.addEventListener("dragend", handleDragEnd);
+    elements.board.addEventListener("dragover", handleDragOver);
+    elements.board.addEventListener("dragleave", handleDragLeave);
+    elements.board.addEventListener("drop", handleDrop);
 
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && !elements.modalBackdrop.hidden) {
+        if (event.key !== "Escape") {
+            return;
+        }
+
+        if (!elements.modalBackdrop.hidden) {
             closeModal();
         }
+
+        if (!elements.moveModalBackdrop.hidden) {
+            closeMoveModal();
+        }
     });
+}
+
+async function moveCard(card, targetStage, reason) {
+    setBoardStatus(`Movendo "${card.titulo}" para ${stageLabel(targetStage)}...`);
+
+    try {
+        const response = await fetch(API.stageHistory, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            },
+            body: JSON.stringify({
+                cardId: card.id,
+                fromEstage: card.estagio,
+                toEstage: targetStage,
+                razao: reason
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("Tente mover novamente em alguns instantes.");
+        }
+
+        await loadCards();
+        setBoardStatus(`"${card.titulo}" movido para ${stageLabel(targetStage)}.`);
+    } catch (error) {
+        setBoardStatus(`Nao foi possivel mover o card. ${error.message}`);
+        throw error;
+    }
 }
 
 async function loadCards() {
@@ -225,7 +288,7 @@ function renderBoard() {
                 </div>
                 <span class="stage-count">${cards.length}</span>
             </header>
-            <div class="card-list"></div>
+            <div class="card-list" data-stage="${stage.key}"></div>
         `;
 
         const list = column.querySelector(".card-list");
@@ -249,6 +312,10 @@ function renderCard(card) {
     const article = document.createElement("article");
     article.className = "study-card";
     article.dataset.priority = card.prioridade;
+    article.dataset.cardId = card.id;
+    article.draggable = true;
+    article.tabIndex = 0;
+    article.setAttribute("aria-label", `${card.titulo}. Arraste para outro stage para movimentar.`);
 
     const description = card.descricao
         ? `<p class="card-description">${escapeHtml(card.descricao)}</p>`
@@ -268,6 +335,114 @@ function renderCard(card) {
     `;
 
     return article;
+}
+
+function handleDragStart(event) {
+    const cardElement = event.target.closest(".study-card");
+    if (!cardElement) {
+        return;
+    }
+
+    state.draggedCardId = Number(cardElement.dataset.cardId);
+    cardElement.classList.add("is-dragging");
+    elements.board.classList.add("is-drag-active");
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(state.draggedCardId));
+}
+
+function handleDragEnd() {
+    state.draggedCardId = null;
+    elements.board.classList.remove("is-drag-active");
+    document.querySelectorAll(".stage-column.is-drop-target").forEach((column) => {
+        column.classList.remove("is-drop-target");
+    });
+    document.querySelectorAll(".study-card.is-dragging").forEach((card) => {
+        card.classList.remove("is-dragging");
+    });
+}
+
+function handleDragOver(event) {
+    const column = event.target.closest(".stage-column");
+    if (!column || !state.draggedCardId) {
+        return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    document.querySelectorAll(".stage-column.is-drop-target").forEach((item) => {
+        if (item !== column) {
+            item.classList.remove("is-drop-target");
+        }
+    });
+    column.classList.add("is-drop-target");
+}
+
+function handleDragLeave(event) {
+    const column = event.target.closest(".stage-column");
+    if (!column || column.contains(event.relatedTarget)) {
+        return;
+    }
+
+    column.classList.remove("is-drop-target");
+}
+
+function handleDrop(event) {
+    const column = event.target.closest(".stage-column");
+    if (!column) {
+        return;
+    }
+
+    event.preventDefault();
+    column.classList.remove("is-drop-target");
+
+    const cardId = Number(event.dataTransfer.getData("text/plain") || state.draggedCardId);
+    const card = state.cards.find((item) => item.id === cardId);
+    const targetStage = column.dataset.stage;
+
+    if (!card || !targetStage || targetStage === card.estagio) {
+        return;
+    }
+
+    openMoveModal(card, targetStage);
+}
+
+function openMoveModal(card, targetStage) {
+    state.pendingMove = { card, targetStage };
+    elements.moveModalSubtitle.textContent = card.titulo;
+    elements.moveFromStage.textContent = stageLabel(card.estagio);
+    elements.moveToStage.textContent = stageLabel(targetStage);
+    elements.moveReasonInput.value = "";
+    elements.moveFormFeedback.textContent = "";
+    elements.moveModalBackdrop.hidden = false;
+    elements.moveReasonInput.focus();
+}
+
+function closeMoveModal() {
+    elements.moveModalBackdrop.hidden = true;
+    elements.moveCardForm.reset();
+    elements.moveFormFeedback.textContent = "";
+    state.pendingMove = null;
+}
+
+async function confirmPendingMove(event) {
+    event.preventDefault();
+
+    if (!state.pendingMove) {
+        closeMoveModal();
+        return;
+    }
+
+    const { card, targetStage } = state.pendingMove;
+    const reason = elements.moveReasonInput.value.trim();
+
+    try {
+        await moveCard(card, targetStage, reason);
+        closeMoveModal();
+    } catch (error) {
+        elements.moveFormFeedback.textContent = error.message;
+    }
 }
 
 function renderTagPills(tags = []) {
@@ -306,6 +481,10 @@ function sortCards(first, second) {
     }
 
     return String(second.createdAt).localeCompare(String(first.createdAt));
+}
+
+function stageLabel(stageKey) {
+    return STAGES.find((stage) => stage.key === stageKey)?.label || stageKey;
 }
 
 function priorityLabel(priority) {

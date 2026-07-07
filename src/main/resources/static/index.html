@@ -127,6 +127,44 @@
         </section>
     </div>
 
+    <div class="modal-backdrop" id="moveModalBackdrop" hidden>
+        <section class="modal modal-compact" role="dialog" aria-modal="true" aria-labelledby="moveModalTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Movimentacao</p>
+                    <h2 id="moveModalTitle">Registrar movimento</h2>
+                    <p class="modal-subtitle" id="moveModalSubtitle"></p>
+                </div>
+                <button class="icon-button" id="closeMoveModalButton" type="button" aria-label="Fechar">x</button>
+            </div>
+
+            <form id="moveCardForm">
+                <div class="move-summary" aria-label="Resumo da movimentacao">
+                    <div>
+                        <span>Origem</span>
+                        <strong id="moveFromStage"></strong>
+                    </div>
+                    <div>
+                        <span>Destino</span>
+                        <strong id="moveToStage"></strong>
+                    </div>
+                </div>
+
+                <label class="field wide">
+                    <span>Motivo opcional</span>
+                    <textarea id="moveReasonInput" name="razao" rows="4" placeholder="O que mudou no estudo?"></textarea>
+                </label>
+
+                <div class="form-feedback" id="moveFormFeedback" role="alert"></div>
+
+                <div class="modal-actions">
+                    <button class="ghost-button" id="cancelMoveButton" type="button">Cancelar</button>
+                    <button class="primary-button" type="submit">Confirmar movimento</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
     <script src="/app.js" defer></script>
 </body>
 </html>

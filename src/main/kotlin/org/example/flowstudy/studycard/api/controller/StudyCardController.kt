@@ -1,10 +1,9 @@
-package org.example.flowstudy.studycard
+package org.example.flowstudy.studycard.api.controller
 
 import jakarta.validation.Valid
 import org.example.flowstudy.studycard.api.dto.StudyCardRequest
 import org.example.flowstudy.studycard.api.dto.StudyCardResponse
 import org.example.flowstudy.studycard.application.service.StudyCardService
-import org.example.flowstudy.studycard.domain.model.StudyCard
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
