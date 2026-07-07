@@ -5,6 +5,7 @@ import org.example.flowstudy.studycard.api.dto.StudyCardRequest
 import org.example.flowstudy.studycard.api.dto.StudyCardResponse
 import org.example.flowstudy.studycard.application.service.StudyCardService
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -35,5 +36,11 @@ class StudyCardController (
     @GetMapping
     fun listar(): ResponseEntity<List<StudyCardResponse>> {
         return ResponseEntity.ok(studyCardService.buscar())
+    }
+
+    @DeleteMapping("/{id}")
+    fun apagar(@PathVariable id: Long): ResponseEntity<Void> {
+        studyCardService.apagar(id)
+        return ResponseEntity.noContent().build()
     }
 }

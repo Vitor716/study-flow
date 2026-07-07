@@ -5,4 +5,5 @@ import org.example.flowstudy.studycard.infrastructure.persistence.JpaStageHistor
 
 interface StageHistoryRepository : JpaStageHistoryRepository{
     override fun findByCardId(studyCardId: Long): StageHistory?
+    override fun deleteByCardId(studyCardId: Long)
 }

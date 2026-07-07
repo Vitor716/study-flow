@@ -5,4 +5,5 @@ import org.example.flowstudy.studycard.infrastructure.persistence.JpaEvidenciaAt
 
 interface EvidenciaAtivaRepository : JpaEvidenciaAtivaRepository {
     override fun findByCardId(cardId: Long): List<EvidenciaAtiva>
+    override fun deleteByCardId(cardId: Long)
 }

@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface JpaRecursoEstudoRepository : JpaRepository<RecursoEstudo, Long> {
     fun findByCardId(cardId: Long): List<RecursoEstudo>
+    fun deleteByCardId(cardId: Long)
 }

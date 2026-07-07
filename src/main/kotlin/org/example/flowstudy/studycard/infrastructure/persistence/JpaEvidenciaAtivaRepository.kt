@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface JpaEvidenciaAtivaRepository : JpaRepository<EvidenciaAtiva, Long> {
     fun findByCardId(cardId: Long): List<EvidenciaAtiva>
+    fun deleteByCardId(cardId: Long)
 }

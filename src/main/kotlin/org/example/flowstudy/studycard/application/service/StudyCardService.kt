@@ -7,4 +7,5 @@ interface StudyCardService {
     fun criar(request: StudyCardRequest): StudyCardResponse
     fun atualizar(id: Long, request: StudyCardRequest): StudyCardResponse
     fun buscar(): List<StudyCardResponse>
+    fun apagar(id: Long)
 }

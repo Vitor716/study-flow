@@ -5,4 +5,5 @@ import org.example.flowstudy.studycard.infrastructure.persistence.JpaRecursoEstu
 
 interface RecursoEstudoRepository : JpaRecursoEstudoRepository {
     override fun findByCardId(cardId: Long): List<RecursoEstudo>
+    override fun deleteByCardId(cardId: Long)
 }

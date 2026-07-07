@@ -2,7 +2,9 @@ const API = {
     cards: "/api/study-card",
     stageHistory: "/api/stage-history",
     resources: (cardId) => `/api/cards/${cardId}/resources`,
-    evidence: (cardId) => `/api/cards/${cardId}/evidence`
+    resource: (cardId, resourceId) => `/api/cards/${cardId}/resources/${resourceId}`,
+    evidence: (cardId) => `/api/cards/${cardId}/evidence`,
+    evidenceItem: (cardId, evidenceId) => `/api/cards/${cardId}/evidence/${evidenceId}`
 };
 
 const STAGES = [
@@ -21,6 +23,8 @@ const state = {
     pendingMove: null,
     activeCard: null,
     editingCardId: null,
+    editingResourceId: null,
+    editingEvidenceId: null,
     resources: [],
     evidence: [],
     filters: {
@@ -64,6 +68,7 @@ const elements = {
     moveReasonInput: document.querySelector("#moveReasonInput"),
     moveFormFeedback: document.querySelector("#moveFormFeedback"),
     detailModalBackdrop: document.querySelector("#detailModalBackdrop"),
+    deleteCardButton: document.querySelector("#deleteCardButton"),
     editCardButton: document.querySelector("#editCardButton"),
     closeDetailModalButton: document.querySelector("#closeDetailModalButton"),
     detailModalContext: document.querySelector("#detailModalContext"),
@@ -79,12 +84,18 @@ const elements = {
     resourceTitleInput: document.querySelector("#resourceTitleInput"),
     resourceUrlInput: document.querySelector("#resourceUrlInput"),
     resourceNotesInput: document.querySelector("#resourceNotesInput"),
+    resourceFormTitle: document.querySelector("#resourceFormTitle"),
+    cancelResourceEditButton: document.querySelector("#cancelResourceEditButton"),
+    saveResourceButton: document.querySelector("#saveResourceButton"),
     evidenceCount: document.querySelector("#evidenceCount"),
     evidenceList: document.querySelector("#evidenceList"),
     evidenceForm: document.querySelector("#evidenceForm"),
     evidenceTypeInput: document.querySelector("#evidenceTypeInput"),
     evidenceTitleInput: document.querySelector("#evidenceTitleInput"),
     evidenceContentInput: document.querySelector("#evidenceContentInput"),
+    evidenceFormTitle: document.querySelector("#evidenceFormTitle"),
+    cancelEvidenceEditButton: document.querySelector("#cancelEvidenceEditButton"),
+    saveEvidenceButton: document.querySelector("#saveEvidenceButton"),
     detailFormFeedback: document.querySelector("#detailFormFeedback")
 };
 
@@ -102,6 +113,7 @@ function bindEvents() {
     elements.closeMoveModalButton.addEventListener("click", closeMoveModal);
     elements.cancelMoveButton.addEventListener("click", closeMoveModal);
     elements.editCardButton.addEventListener("click", openEditCardModal);
+    elements.deleteCardButton.addEventListener("click", deleteActiveCard);
     elements.closeDetailModalButton.addEventListener("click", closeDetailModal);
     elements.modalBackdrop.addEventListener("click", (event) => {
         if (event.target === elements.modalBackdrop) {
@@ -131,8 +143,12 @@ function bindEvents() {
 
     elements.createCardForm.addEventListener("submit", saveCard);
     elements.moveCardForm.addEventListener("submit", confirmPendingMove);
-    elements.resourceForm.addEventListener("submit", createResource);
-    elements.evidenceForm.addEventListener("submit", createEvidence);
+    elements.resourceForm.addEventListener("submit", saveResource);
+    elements.evidenceForm.addEventListener("submit", saveEvidence);
+    elements.cancelResourceEditButton.addEventListener("click", resetResourceForm);
+    elements.cancelEvidenceEditButton.addEventListener("click", resetEvidenceForm);
+    elements.resourcesList.addEventListener("click", handleResourceAction);
+    elements.evidenceList.addEventListener("click", handleEvidenceAction);
     elements.board.addEventListener("click", handleBoardClick);
     elements.board.addEventListener("dragstart", handleDragStart);
     elements.board.addEventListener("dragend", handleDragEnd);
@@ -403,7 +419,9 @@ function renderCard(card) {
             </div>
             <div class="progress-track"><span style="width: ${progress.percent}%"></span></div>
         </div>
-        <button class="card-detail-button" type="button">Detalhes</button>
+        <button class="card-detail-button icon-action" type="button" aria-label="Abrir detalhes" data-tooltip="Detalhes">
+            <span class="icon detail-icon" aria-hidden="true"></span>
+        </button>
     `;
 
     return article;
@@ -526,8 +544,8 @@ async function openCardDetail(card) {
     elements.detailModalTitle.textContent = card.titulo;
     elements.detailModalSubtitle.textContent = card.descricao || "Registre recursos consultados e evidencias produzidas.";
     elements.detailFormFeedback.textContent = "";
-    elements.resourceForm.reset();
-    elements.evidenceForm.reset();
+    resetResourceForm();
+    resetEvidenceForm();
     renderDetailProgress(card);
     elements.detailModalBackdrop.hidden = false;
     await loadCardArtifacts(card.id);
@@ -535,12 +553,41 @@ async function openCardDetail(card) {
 
 function closeDetailModal() {
     elements.detailModalBackdrop.hidden = true;
-    elements.resourceForm.reset();
-    elements.evidenceForm.reset();
+    resetResourceForm();
+    resetEvidenceForm();
     elements.detailFormFeedback.textContent = "";
     state.activeCard = null;
     state.resources = [];
     state.evidence = [];
+}
+
+async function deleteActiveCard() {
+    if (!state.activeCard) {
+        return;
+    }
+
+    const card = state.activeCard;
+    const confirmed = confirm(`Apagar o card "${card.titulo}" e todos os recursos, evidencias e historico vinculados?`);
+    if (!confirmed) {
+        return;
+    }
+
+    elements.detailFormFeedback.textContent = "";
+
+    const response = await fetch(`${API.cards}/${card.id}`, {
+        method: "DELETE",
+        headers: { Accept: "application/json" }
+    });
+
+    if (!response.ok) {
+        elements.detailFormFeedback.textContent = "Nao foi possivel apagar o card. Tente novamente.";
+        return;
+    }
+
+    state.cards = state.cards.filter((item) => item.id !== card.id);
+    closeDetailModal();
+    renderBoard();
+    setBoardStatus(`"${card.titulo}" apagado.`);
 }
 
 async function loadCardArtifacts(cardId) {
@@ -582,7 +629,7 @@ async function fetchEvidence(cardId) {
     return response.json();
 }
 
-async function createResource(event) {
+async function saveResource(event) {
     event.preventDefault();
 
     if (!state.activeCard) {
@@ -603,16 +650,22 @@ async function createResource(event) {
         return;
     }
 
-    const saved = await postArtifact(API.resources(state.activeCard.id), payload, elements.resourceForm);
+    const isEditing = state.editingResourceId !== null;
+    const saved = await saveArtifact(
+        isEditing ? API.resource(state.activeCard.id, state.editingResourceId) : API.resources(state.activeCard.id),
+        payload,
+        isEditing ? "PUT" : "POST"
+    );
     if (!saved) {
         return;
     }
 
     state.resources = await fetchResources(state.activeCard.id);
     renderResources();
+    resetResourceForm();
 }
 
-async function createEvidence(event) {
+async function saveEvidence(event) {
     event.preventDefault();
 
     if (!state.activeCard) {
@@ -632,20 +685,26 @@ async function createEvidence(event) {
         return;
     }
 
-    const saved = await postArtifact(API.evidence(state.activeCard.id), payload, elements.evidenceForm);
+    const isEditing = state.editingEvidenceId !== null;
+    const saved = await saveArtifact(
+        isEditing ? API.evidenceItem(state.activeCard.id, state.editingEvidenceId) : API.evidence(state.activeCard.id),
+        payload,
+        isEditing ? "PUT" : "POST"
+    );
     if (!saved) {
         return;
     }
 
     state.evidence = await fetchEvidence(state.activeCard.id);
     renderEvidence();
+    resetEvidenceForm();
 }
 
-async function postArtifact(url, payload, form) {
+async function saveArtifact(url, payload, method) {
     elements.detailFormFeedback.textContent = "";
 
     const response = await fetch(url, {
-        method: "POST",
+        method,
         headers: {
             "Content-Type": "application/json",
             Accept: "application/json"
@@ -658,7 +717,6 @@ async function postArtifact(url, payload, form) {
         return false;
     }
 
-    form.reset();
     return true;
 }
 
@@ -666,19 +724,26 @@ function renderResources() {
     elements.resourcesCount.textContent = state.resources.length;
 
     if (state.resources.length === 0) {
-        elements.resourcesList.innerHTML = `<div class="empty-stage">Nenhum recurso registrado</div>`;
+        elements.resourcesList.innerHTML = `<div class="empty-stage">Nenhum recurso registrado. Comece pelos links e materiais que vao guiar o estudo.</div>`;
         return;
     }
 
     elements.resourcesList.innerHTML = state.resources
         .map((resource) => `
-            <article class="artifact-item">
-                <div>
-                    <span class="artifact-type">${resourceTypeLabel(resource.tipo)}</span>
-                    <h4>${escapeHtml(resource.titulo)}</h4>
-                    ${resource.observacoes ? `<p>${escapeHtml(resource.observacoes)}</p>` : ""}
+            <article class="resource-card">
+                <div class="artifact-card-main">
+                    <div>
+                        <span class="artifact-type">${resourceTypeLabel(resource.tipo)}</span>
+                        <h4>${escapeHtml(resource.titulo)}</h4>
+                    </div>
+                    <div class="artifact-actions">
+                        ${resource.url ? `<a class="small-icon-button" href="${escapeHtml(resource.url)}" target="_blank" rel="noreferrer" aria-label="Abrir recurso" title="Abrir recurso"><span class="icon external-icon" aria-hidden="true"></span></a>` : ""}
+                        <button class="small-icon-button" type="button" data-resource-action="edit" data-resource-id="${resource.id}" aria-label="Editar recurso" title="Editar recurso"><span class="icon edit-icon" aria-hidden="true"></span></button>
+                        <button class="small-icon-button danger-icon-button" type="button" data-resource-action="delete" data-resource-id="${resource.id}" aria-label="Apagar recurso" title="Apagar recurso"><span class="icon trash-icon" aria-hidden="true"></span></button>
+                    </div>
                 </div>
-                ${resource.url ? `<a href="${escapeHtml(resource.url)}" target="_blank" rel="noreferrer">Abrir</a>` : ""}
+                ${resource.url ? `<a class="resource-url" href="${escapeHtml(resource.url)}" target="_blank" rel="noreferrer">${escapeHtml(resource.url)}</a>` : ""}
+                ${resource.observacoes ? `<p>${escapeHtml(resource.observacoes)}</p>` : ""}
             </article>
         `)
         .join("");
@@ -695,14 +760,151 @@ function renderEvidence() {
     elements.evidenceList.innerHTML = state.evidence
         .map((evidence) => `
             <article class="artifact-item">
+                <div class="artifact-card-main">
+                    <div>
+                        <span class="artifact-type">${evidenceTypeLabel(evidence.tipo)}</span>
+                        <h4>${escapeHtml(evidence.titulo)}</h4>
+                    </div>
+                    <div class="artifact-actions">
+                        <button class="small-icon-button" type="button" data-evidence-action="edit" data-evidence-id="${evidence.id}" aria-label="Editar evidencia" title="Editar evidencia"><span class="icon edit-icon" aria-hidden="true"></span></button>
+                        <button class="small-icon-button danger-icon-button" type="button" data-evidence-action="delete" data-evidence-id="${evidence.id}" aria-label="Apagar evidencia" title="Apagar evidencia"><span class="icon trash-icon" aria-hidden="true"></span></button>
+                    </div>
+                </div>
                 <div>
-                    <span class="artifact-type">${evidenceTypeLabel(evidence.tipo)}</span>
-                    <h4>${escapeHtml(evidence.titulo)}</h4>
-                    <p class="${evidence.tipo === "CODIGO" ? "code-evidence" : ""}">${escapeHtml(evidence.conteudo)}</p>
+                    <p class="${evidence.tipo === "CODIGO" ? "code-evidence" : ""}">${formatTextWithLinks(evidence.conteudo)}</p>
                 </div>
             </article>
         `)
         .join("");
+}
+
+function resetResourceForm() {
+    state.editingResourceId = null;
+    elements.resourceForm.reset();
+    elements.resourceFormTitle.textContent = "Adicionar recurso";
+    elements.saveResourceButton.textContent = "Adicionar recurso";
+    elements.cancelResourceEditButton.hidden = true;
+}
+
+function resetEvidenceForm() {
+    state.editingEvidenceId = null;
+    elements.evidenceForm.reset();
+    elements.evidenceFormTitle.textContent = "Adicionar evidencia";
+    elements.saveEvidenceButton.textContent = "Adicionar evidencia";
+    elements.cancelEvidenceEditButton.hidden = true;
+}
+
+function handleResourceAction(event) {
+    const button = event.target.closest("[data-resource-action]");
+    if (!button) {
+        return;
+    }
+
+    const resourceId = Number(button.dataset.resourceId);
+    const resource = state.resources.find((item) => item.id === resourceId);
+    if (!resource) {
+        return;
+    }
+
+    if (button.dataset.resourceAction === "edit") {
+        editResource(resource);
+        return;
+    }
+
+    deleteResource(resource);
+}
+
+function editResource(resource) {
+    state.editingResourceId = resource.id;
+    elements.resourceTypeInput.value = resource.tipo;
+    elements.resourceTitleInput.value = resource.titulo;
+    elements.resourceUrlInput.value = resource.url || "";
+    elements.resourceNotesInput.value = resource.observacoes || "";
+    elements.resourceFormTitle.textContent = "Editar recurso";
+    elements.saveResourceButton.textContent = "Salvar recurso";
+    elements.cancelResourceEditButton.hidden = false;
+    elements.resourceTitleInput.focus();
+}
+
+async function deleteResource(resource) {
+    if (!state.activeCard || !confirm(`Apagar o recurso "${resource.titulo}"?`)) {
+        return;
+    }
+
+    const deleted = await deleteArtifact(API.resource(state.activeCard.id, resource.id), "Nao foi possivel apagar o recurso.");
+    if (!deleted) {
+        return;
+    }
+
+    state.resources = await fetchResources(state.activeCard.id);
+    renderResources();
+    if (state.editingResourceId === resource.id) {
+        resetResourceForm();
+    }
+}
+
+function handleEvidenceAction(event) {
+    const button = event.target.closest("[data-evidence-action]");
+    if (!button) {
+        return;
+    }
+
+    const evidenceId = Number(button.dataset.evidenceId);
+    const evidence = state.evidence.find((item) => item.id === evidenceId);
+    if (!evidence) {
+        return;
+    }
+
+    if (button.dataset.evidenceAction === "edit") {
+        editEvidence(evidence);
+        return;
+    }
+
+    deleteEvidence(evidence);
+}
+
+function editEvidence(evidence) {
+    state.editingEvidenceId = evidence.id;
+    elements.evidenceTypeInput.value = evidence.tipo;
+    elements.evidenceTitleInput.value = evidence.titulo;
+    elements.evidenceContentInput.value = evidence.conteudo;
+    elements.evidenceFormTitle.textContent = "Editar evidencia";
+    elements.saveEvidenceButton.textContent = "Salvar evidencia";
+    elements.cancelEvidenceEditButton.hidden = false;
+    elements.evidenceTitleInput.focus();
+}
+
+async function deleteEvidence(evidence) {
+    if (!state.activeCard || !confirm(`Apagar a evidencia "${evidence.titulo}"?`)) {
+        return;
+    }
+
+    const deleted = await deleteArtifact(API.evidenceItem(state.activeCard.id, evidence.id), "Nao foi possivel apagar a evidencia.");
+    if (!deleted) {
+        return;
+    }
+
+    state.evidence = await fetchEvidence(state.activeCard.id);
+    renderEvidence();
+    if (state.editingEvidenceId === evidence.id) {
+        resetEvidenceForm();
+    }
+}
+
+async function deleteArtifact(url, errorMessage) {
+    elements.detailFormFeedback.textContent = "";
+
+    const response = await fetch(url, {
+        method: "DELETE",
+        headers: { Accept: "application/json" }
+    });
+
+    if (!response.ok) {
+        elements.detailFormFeedback.textContent = errorMessage;
+        return false;
+    }
+
+    return true;
 }
 
 function renderDetailProgress(card) {
@@ -882,4 +1084,15 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+}
+
+function formatTextWithLinks(value) {
+    const urlPattern = /(https?:\/\/[^\s<>"']+)/g;
+
+    return escapeHtml(value).replace(urlPattern, (url) => {
+        const cleanUrl = url.replace(/[.,;:!?)]$/, "");
+        const trailing = url.slice(cleanUrl.length);
+
+        return `<a class="inline-link" href="${cleanUrl}" target="_blank" rel="noreferrer">${cleanUrl}</a>${trailing}`;
+    });
 }

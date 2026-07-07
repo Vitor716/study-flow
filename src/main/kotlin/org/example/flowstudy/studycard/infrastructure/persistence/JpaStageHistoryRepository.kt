@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface JpaStageHistoryRepository : JpaRepository<StageHistory, Long>{
     fun findByCardId(studyCardId: Long): StageHistory?
+    fun deleteByCardId(studyCardId: Long)
 }

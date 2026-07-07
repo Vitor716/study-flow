@@ -15,8 +15,12 @@
                 <p class="topbar-subtitle">Organize assuntos, acompanhe progresso e mantenha o foco no proximo passo.</p>
             </div>
             <div class="topbar-actions">
-                <button class="ghost-button" id="refreshButton" type="button">Atualizar</button>
-                <button class="primary-button" id="openCreateModalButton" type="button">Novo estudo</button>
+                <button class="icon-action ghost-button" id="refreshButton" type="button" aria-label="Atualizar estudos" data-tooltip="Atualizar">
+                    <span class="icon refresh-icon" aria-hidden="true"></span>
+                </button>
+                <button class="icon-action primary-button" id="openCreateModalButton" type="button" aria-label="Novo estudo" data-tooltip="Novo estudo">
+                    <span class="icon plus-icon" aria-hidden="true"></span>
+                </button>
             </div>
         </header>
 
@@ -178,7 +182,12 @@
                     <p class="modal-subtitle" id="detailModalSubtitle"></p>
                 </div>
                 <div class="modal-header-actions">
-                    <button class="ghost-button" id="editCardButton" type="button">Editar dados</button>
+                    <button class="danger-button icon-action" id="deleteCardButton" type="button" aria-label="Apagar card" data-tooltip="Apagar card">
+                        <span class="icon trash-icon" aria-hidden="true"></span>
+                    </button>
+                    <button class="icon-action ghost-button" id="editCardButton" type="button" aria-label="Editar dados" data-tooltip="Editar dados">
+                        <span class="icon edit-icon" aria-hidden="true"></span>
+                    </button>
                     <button class="icon-button" id="closeDetailModalButton" type="button" aria-label="Fechar">x</button>
                 </div>
             </div>
@@ -193,70 +202,102 @@
                 </div>
             </div>
 
-            <div class="detail-grid">
-                <section class="detail-panel">
-                    <div class="panel-header">
-                        <h3>Recursos</h3>
+            <div class="detail-stack">
+                <section class="detail-panel resources-panel">
+                    <div class="panel-header panel-header-rich">
+                        <div>
+                            <p class="eyebrow">Referencias de estudo</p>
+                            <h3>Recursos</h3>
+                            <p>Links, documentacoes, tarefas e materiais que alimentam o estudo.</p>
+                        </div>
                         <span id="resourcesCount">0</span>
                     </div>
-                    <div class="detail-list" id="resourcesList"></div>
-                    <form class="stacked-form" id="resourceForm">
-                        <label class="field">
-                            <span>Tipo</span>
-                            <select id="resourceTypeInput" name="tipo" required>
-                                <option value="VIDEO">Video</option>
-                                <option value="ARTIGO">Artigo</option>
-                                <option value="CURSO">Curso</option>
-                                <option value="LIVRO">Livro</option>
-                                <option value="DOCUMENTACAO">Documentacao</option>
-                                <option value="BUG">Bug</option>
-                                <option value="TAREFA">Tarefa</option>
-                                <option value="OUTRO">Outro</option>
-                            </select>
-                        </label>
-                        <label class="field">
-                            <span>Titulo</span>
-                            <input id="resourceTitleInput" name="titulo" type="text" maxlength="140" required>
-                        </label>
-                        <label class="field">
-                            <span>URL</span>
-                            <input id="resourceUrlInput" name="url" type="url" placeholder="https://">
-                        </label>
-                        <label class="field">
-                            <span>Observacoes</span>
-                            <textarea id="resourceNotesInput" name="observacoes" rows="3"></textarea>
-                        </label>
-                        <button class="primary-button" type="submit">Adicionar recurso</button>
+                    <div class="resource-gallery" id="resourcesList"></div>
+                    <form class="artifact-form" id="resourceForm">
+                        <div class="artifact-form-header">
+                            <span class="artifact-form-icon link-icon" aria-hidden="true"></span>
+                            <div>
+                                <h4 id="resourceFormTitle">Adicionar recurso</h4>
+                                <p>Guarde links, docs, tarefas e referencias externas.</p>
+                            </div>
+                        </div>
+                        <div class="artifact-form-grid">
+                            <label class="field">
+                                <span>Tipo</span>
+                                <select id="resourceTypeInput" name="tipo" required>
+                                    <option value="VIDEO">Video</option>
+                                    <option value="ARTIGO">Artigo</option>
+                                    <option value="CURSO">Curso</option>
+                                    <option value="LIVRO">Livro</option>
+                                    <option value="DOCUMENTACAO">Documentacao</option>
+                                    <option value="BUG">Bug</option>
+                                    <option value="TAREFA">Tarefa</option>
+                                    <option value="OUTRO">Outro</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Titulo</span>
+                                <input id="resourceTitleInput" name="titulo" type="text" maxlength="140" required>
+                            </label>
+                            <label class="field wide">
+                                <span>URL</span>
+                                <input id="resourceUrlInput" name="url" type="url" placeholder="https://github.com/...">
+                            </label>
+                            <label class="field wide">
+                                <span>Observacoes</span>
+                                <textarea id="resourceNotesInput" name="observacoes" rows="3"></textarea>
+                            </label>
+                        </div>
+                        <div class="artifact-form-actions">
+                            <button class="ghost-button" id="cancelResourceEditButton" type="button" hidden>Cancelar edicao</button>
+                            <button class="primary-button" id="saveResourceButton" type="submit">Adicionar recurso</button>
+                        </div>
                     </form>
                 </section>
 
-                <section class="detail-panel">
-                    <div class="panel-header">
-                        <h3>Evidencias ativas</h3>
+                <section class="detail-panel evidence-panel">
+                    <div class="panel-header panel-header-rich">
+                        <div>
+                            <p class="eyebrow">Fechamento do ciclo</p>
+                            <h3>Evidencias ativas</h3>
+                            <p>Use no final do ciclo para registrar conclusoes, decisoes e provas de entendimento.</p>
+                        </div>
                         <span id="evidenceCount">0</span>
                     </div>
                     <div class="detail-list" id="evidenceList"></div>
-                    <form class="stacked-form" id="evidenceForm">
-                        <label class="field">
-                            <span>Tipo</span>
-                            <select id="evidenceTypeInput" name="tipo" required>
-                                <option value="TEXTO">Texto</option>
-                                <option value="CODIGO">Codigo</option>
-                                <option value="PERGUNTA_RESPOSTA">Pergunta e resposta</option>
-                                <option value="DECISAO_TECNICA">Decisao tecnica</option>
-                                <option value="RESUMO_ATIVO">Resumo ativo</option>
-                                <option value="CHECKLIST">Checklist</option>
-                            </select>
-                        </label>
-                        <label class="field">
-                            <span>Titulo</span>
-                            <input id="evidenceTitleInput" name="titulo" type="text" maxlength="140" required>
-                        </label>
-                        <label class="field">
-                            <span>Conteudo</span>
-                            <textarea id="evidenceContentInput" name="conteudo" rows="6" required></textarea>
-                        </label>
-                        <button class="primary-button" type="submit">Adicionar evidencia</button>
+                    <form class="artifact-form" id="evidenceForm">
+                        <div class="artifact-form-header">
+                            <span class="artifact-form-icon evidence-icon" aria-hidden="true"></span>
+                            <div>
+                                <h4 id="evidenceFormTitle">Adicionar evidencia</h4>
+                                <p>Cole respostas, decisoes, codigo e links como GitHub ou docs.</p>
+                            </div>
+                        </div>
+                        <div class="artifact-form-grid">
+                            <label class="field">
+                                <span>Tipo</span>
+                                <select id="evidenceTypeInput" name="tipo" required>
+                                    <option value="TEXTO">Texto</option>
+                                    <option value="CODIGO">Codigo</option>
+                                    <option value="PERGUNTA_RESPOSTA">Pergunta e resposta</option>
+                                    <option value="DECISAO_TECNICA">Decisao tecnica</option>
+                                    <option value="RESUMO_ATIVO">Resumo ativo</option>
+                                    <option value="CHECKLIST">Checklist</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Titulo</span>
+                                <input id="evidenceTitleInput" name="titulo" type="text" maxlength="140" required>
+                            </label>
+                            <label class="field wide">
+                                <span>Conteudo</span>
+                                <textarea id="evidenceContentInput" name="conteudo" rows="6" placeholder="Resumo, resposta ou link: https://github.com/... " required></textarea>
+                            </label>
+                        </div>
+                        <div class="artifact-form-actions">
+                            <button class="ghost-button" id="cancelEvidenceEditButton" type="button" hidden>Cancelar edicao</button>
+                            <button class="primary-button" id="saveEvidenceButton" type="submit">Adicionar evidencia</button>
+                        </div>
                     </form>
                 </section>
             </div>
