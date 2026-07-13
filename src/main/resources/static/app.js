@@ -8,14 +8,15 @@ const API = {
 };
 
 const STAGES = [
-    { key: "GATILHO", label: "Gatilho", hint: "Problema percebido", detail: "Capture o gatilho: bug, duvida, requisito ou lacuna que iniciou o estudo.", color: "#ff8d7a" },
-    { key: "CAPTURA", label: "Captura", hint: "Escopo e materiais", detail: "Defina o recorte e junte links, docs, cursos ou referencias para estudar.", color: "#f0b65d" },
-    { key: "ESTUDO_ATIVO", label: "Estudo ativo", hint: "Entendimento guiado", detail: "Leia, compare, teste hipoteses e produza explicacoes com suas palavras.", color: "#8fb5ff" },
-    { key: "APLICACAO", label: "Aplicacao", hint: "Codigo ou entrega", detail: "Transforme o estudo em snippet, endpoint, teste, refatoracao ou decisao tecnica.", color: "#9a8cff" },
-    { key: "REFINAMENTO", label: "Refinamento", hint: "Nota e ajuste fino", detail: "Revise a saida, remova ruido e registre evidencias ativas antes de consolidar.", color: "#e184c5" },
-    { key: "CONSOLIDACAO", label: "Consolidacao", hint: "Flashcards e revisao", detail: "Converta o aprendizado em revisao, flashcards ou criterio de uso futuro.", color: "#78d6a3" },
-    { key: "ABSORVIDO", label: "Absorvido", hint: "Retencao validada", detail: "Marque quando conseguir recuperar e transferir o conhecimento sem consulta direta.", color: "#8fd7d2" }
+    { key: "TRIAGEM", label: "Capturar", hint: "Defina o card e os materiais", detail: "Transforme o gatilho em um card de estudo acionavel.", color: "#ffb067" },
+    { key: "ESTUDO_ATIVO", label: "Estudar", hint: "Entenda e explique", detail: "Leia, compare e explique com suas palavras.", color: "#8fb5ff" },
+    { key: "APLICACAO", label: "Praticar", hint: "Teste no projeto", detail: "Aplique em codigo, teste ou entrega concreta.", color: "#9a8cff" },
+    { key: "REFINAMENTO", label: "Registrar", hint: "Anote o que aprendeu", detail: "Registre conclusoes e evidencias ativas.", color: "#e184c5" },
+    { key: "CONSOLIDACAO", label: "Revisar", hint: "Recupere sem consulta", detail: "Converta em revisao ou flashcards.", color: "#78d6a3" },
+    { key: "ABSORVIDO", label: "Consolidado", hint: "Use com autonomia", detail: "Voce consegue recuperar e transferir o conhecimento.", color: "#8fd7d2" }
 ];
+
+const CARD_DESCRIPTION_LIMIT = 90;
 
 const state = {
     cards: [],
@@ -23,18 +24,25 @@ const state = {
     pendingMove: null,
     activeCard: null,
     editingCardId: null,
+    creatingStage: "TRIAGEM",
     editingResourceId: null,
     editingEvidenceId: null,
     resources: [],
     evidence: [],
     filters: {
         context: "",
-        priority: ""
-    }
+        priority: "",
+        stage: ""
+    },
+    expandedGroups: new Set()
 };
 
 const elements = {
     board: document.querySelector("#board"),
+    consolidatedBoard: document.querySelector("#consolidatedBoard"),
+    consolidatedSection: document.querySelector("#consolidatedSection"),
+    studyTimeline: document.querySelector("#studyTimeline"),
+    clearStageFilterButton: document.querySelector("#clearStageFilterButton"),
     boardStatus: document.querySelector("#boardStatus"),
     totalCards: document.querySelector("#totalCards"),
     highPriorityCards: document.querySelector("#highPriorityCards"),
@@ -87,6 +95,7 @@ const elements = {
     resourceFormTitle: document.querySelector("#resourceFormTitle"),
     cancelResourceEditButton: document.querySelector("#cancelResourceEditButton"),
     saveResourceButton: document.querySelector("#saveResourceButton"),
+    evidencePanel: document.querySelector("#evidencePanel"),
     evidenceCount: document.querySelector("#evidenceCount"),
     evidenceList: document.querySelector("#evidenceList"),
     evidenceForm: document.querySelector("#evidenceForm"),
@@ -107,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function bindEvents() {
     elements.refreshButton.addEventListener("click", loadCards);
-    elements.openCreateModalButton.addEventListener("click", openModal);
+    elements.openCreateModalButton.addEventListener("click", () => openModal());
     elements.closeModalButton.addEventListener("click", closeModal);
     elements.cancelCreateButton.addEventListener("click", closeModal);
     elements.closeMoveModalButton.addEventListener("click", closeMoveModal);
@@ -141,6 +150,11 @@ function bindEvents() {
         renderBoard();
     });
 
+    elements.clearStageFilterButton.addEventListener("click", () => {
+        state.filters.stage = "";
+        renderBoard();
+    });
+
     elements.createCardForm.addEventListener("submit", saveCard);
     elements.moveCardForm.addEventListener("submit", confirmPendingMove);
     elements.resourceForm.addEventListener("submit", saveResource);
@@ -150,6 +164,9 @@ function bindEvents() {
     elements.resourcesList.addEventListener("click", handleResourceAction);
     elements.evidenceList.addEventListener("click", handleEvidenceAction);
     elements.board.addEventListener("click", handleBoardClick);
+    elements.consolidatedBoard.addEventListener("click", handleBoardClick);
+    elements.studyTimeline.addEventListener("click", handleBoardClick);
+    elements.board.addEventListener("keydown", handleBoardKeyDown);
     elements.board.addEventListener("dragstart", handleDragStart);
     elements.board.addEventListener("dragend", handleDragEnd);
     elements.board.addEventListener("dragover", handleDragOver);
@@ -279,7 +296,7 @@ function buildPayload() {
         contexto: elements.contextInput.value.trim(),
         prioridade: elements.priorityInput.value,
         descricao: emptyToNull(elements.descriptionInput.value),
-        estagio: editingCard?.estagio || "GATILHO",
+        estagio: editingCard?.estagio || state.creatingStage,
         orderIndex: editingCard?.orderIndex || 0,
         tags: [
             ...parseTags(elements.languagesInput.value, "LINGUAGEM"),
@@ -341,49 +358,61 @@ function emptyToNull(value) {
 
 function renderBoard() {
     const visibleCards = getVisibleCards();
-    const cardsByStage = groupCardsByStage(visibleCards);
+    const activeCards = visibleCards.filter((card) => normalizeStage(card.estagio) !== "ABSORVIDO");
+    const consolidatedCards = visibleCards.filter((card) => normalizeStage(card.estagio) === "ABSORVIDO");
+    const cardsByGroup = groupCardsByType(activeCards);
 
     elements.totalCards.textContent = state.cards.length;
     elements.highPriorityCards.textContent = state.cards.filter((card) => card.prioridade === "ALTA").length;
     elements.visibleCardsLabel.textContent = visibleCards.length;
+    renderStudyTimeline(visibleCards);
+    elements.clearStageFilterButton.hidden = !state.filters.stage;
+    elements.clearStageFilterButton.textContent = state.filters.stage
+        ? `Mostrando: ${stageLabel(state.filters.stage)}`
+        : "Ver todas as etapas";
 
-    elements.board.innerHTML = "";
+    renderGroups(elements.board, cardsByGroup, "active");
+    elements.consolidatedSection.hidden = consolidatedCards.length === 0;
+    if (consolidatedCards.length > 0) {
+        renderGroups(elements.consolidatedBoard, groupCardsByType(consolidatedCards), "consolidated");
+    } else {
+        elements.consolidatedBoard.innerHTML = "";
+    }
+}
 
-    STAGES.forEach((stage) => {
-        const cards = cardsByStage[stage.key] || [];
-        const column = document.createElement("article");
-        column.className = "stage-column";
-        column.dataset.stage = stage.key;
-        column.style.setProperty("--stage-color", stage.color);
-        column.innerHTML = `
-            <header class="stage-header">
+function renderGroups(container, cardsByGroup, groupKind) {
+    container.innerHTML = "";
+    const groups = Object.entries(cardsByGroup).sort(([first], [second]) => first.localeCompare(second, "pt-BR"));
+    if (groups.length === 0) {
+        container.innerHTML = `<div class="empty-board">${groupKind === "consolidated" ? "Nenhum card consolidado neste filtro." : "Nenhum card encontrado com estes filtros."}</div>`;
+        return;
+    }
+
+    groups.forEach(([groupName, cards]) => {
+        const groupKey = `${groupKind}:${groupName}`;
+        const orderedCards = cards.sort(sortStudyPlanCards);
+        const visibleCards = state.expandedGroups.has(groupKey) ? orderedCards : orderedCards.slice(0, 6);
+        const hiddenCount = orderedCards.length - visibleCards.length;
+        const group = document.createElement("section");
+        group.className = "study-group";
+        group.dataset.studyType = groupName;
+        group.innerHTML = `
+            <header class="study-group-header">
                 <div>
-                    <h3 class="stage-title">
-                        <span>${stage.label}</span>
-                        <button class="tooltip-button" type="button" aria-label="${escapeHtml(stage.detail)}">?</button>
-                        <span class="stage-tooltip" role="tooltip">${escapeHtml(stage.detail)}</span>
-                    </h3>
-                    <p class="stage-hint">${stage.hint}</p>
+                    <p class="group-kicker">Gatilho / assunto</p>
+                    <h3>${escapeHtml(groupName)}</h3>
                 </div>
-                <span class="stage-count">${cards.length}</span>
+                <div class="group-actions">
+                    <span class="group-count">${orderedCards.length}</span>
+                    ${groupKind === "active" ? `<button class="group-add-button" type="button" data-study-type="${escapeHtml(groupName)}" aria-label="Adicionar card em ${escapeHtml(groupName)}" title="Adicionar card">+</button>` : ""}
+                </div>
             </header>
-            <div class="card-list" data-stage="${stage.key}"></div>
+            <div class="study-row"></div>
+            ${hiddenCount > 0 ? `<button class="show-more-button" type="button" data-group-key="${escapeHtml(groupKey)}">Ver mais ${hiddenCount} cards</button>` : ""}
         `;
-
-        const list = column.querySelector(".card-list");
-
-        if (cards.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "empty-stage";
-            empty.textContent = "Sem estudos";
-            list.appendChild(empty);
-        } else {
-            cards
-                .sort(sortCards)
-                .forEach((card) => list.appendChild(renderCard(card)));
-        }
-
-        elements.board.appendChild(column);
+        const row = group.querySelector(".study-row");
+        visibleCards.forEach((card) => row.appendChild(renderCard(card)));
+        container.appendChild(group);
     });
 }
 
@@ -392,19 +421,20 @@ function renderCard(card) {
     article.className = "study-card";
     article.dataset.priority = card.prioridade;
     article.dataset.cardId = card.id;
-    article.draggable = true;
+    article.draggable = false;
     article.tabIndex = 0;
-    article.setAttribute("aria-label", `${card.titulo}. Arraste para outro stage para movimentar.`);
+    article.setAttribute("aria-label", `${card.titulo}. Etapa atual: ${stageLabel(card.estagio)}.`);
 
     const description = card.descricao
-        ? `<p class="card-description">${escapeHtml(card.descricao)}</p>`
+        ? renderCardDescription(card.descricao)
         : "";
-    const progress = cardProgress(card.estagio);
+    const progress = cardProgress(normalizeStage(card.estagio));
 
     article.innerHTML = `
         <div class="card-topline">
             <span class="priority-dot" aria-hidden="true"></span>
             <span class="card-context">${escapeHtml(card.contexto)}</span>
+            <span class="card-stage">${stageLabel(card.estagio)} · ${progress.index + 1}/6</span>
         </div>
         <h3 class="card-title">${escapeHtml(card.titulo)}</h3>
         ${description}
@@ -419,26 +449,104 @@ function renderCard(card) {
             </div>
             <div class="progress-track"><span style="width: ${progress.percent}%"></span></div>
         </div>
-        <button class="card-detail-button icon-action" type="button" aria-label="Abrir detalhes" data-tooltip="Detalhes">
-            <span class="icon detail-icon" aria-hidden="true"></span>
-        </button>
+        <div class="card-actions">
+            ${renderOrderControls(card)}
+            <button class="card-detail-button" type="button">Abrir</button>
+            ${nextStageButton(card)}
+        </div>
     `;
 
     return article;
 }
 
 function handleBoardClick(event) {
-    const button = event.target.closest(".card-detail-button");
-    if (!button) {
+    const timelineStep = event.target.closest(".timeline-step");
+    if (timelineStep) {
+        const stage = timelineStep.dataset.stage;
+        state.filters.stage = state.filters.stage === stage ? "" : stage;
+        renderBoard();
         return;
     }
 
-    const cardElement = button.closest(".study-card");
-    const card = state.cards.find((item) => item.id === Number(cardElement?.dataset.cardId));
-
-    if (card) {
-        openCardDetail(card);
+    const showMoreButton = event.target.closest(".show-more-button");
+    if (showMoreButton) {
+        state.expandedGroups.add(showMoreButton.dataset.groupKey);
+        renderBoard();
+        return;
     }
+
+    const orderButton = event.target.closest(".card-order-button");
+    if (orderButton) {
+        const cardElement = orderButton.closest(".study-card");
+        const card = state.cards.find((item) => item.id === Number(cardElement?.dataset.cardId));
+        if (card) {
+            reorderCard(card, orderButton.dataset.direction);
+        }
+        return;
+    }
+    const groupAddButton = event.target.closest(".group-add-button");
+    if (groupAddButton) {
+        openModal("TRIAGEM", groupAddButton.dataset.studyType);
+        return;
+    }
+
+    const moveButton = event.target.closest(".card-next-button");
+    if (moveButton) {
+        const cardElement = moveButton.closest(".study-card");
+        const card = state.cards.find((item) => item.id === Number(cardElement?.dataset.cardId));
+        if (card) {
+            openMoveModal(card, moveButton.dataset.nextStage);
+        }
+        return;
+    }
+
+    const button = event.target.closest(".card-detail-button");
+    if (button) {
+        const cardElement = button.closest(".study-card");
+        const card = state.cards.find((item) => item.id === Number(cardElement?.dataset.cardId));
+
+        if (card) {
+            openCardDetail(card);
+        }
+
+        return;
+    }
+
+    const cardElement = event.target.closest(".study-card");
+    if (cardElement) {
+        const card = state.cards.find((item) => item.id === Number(cardElement.dataset.cardId));
+        if (card) {
+            openCardDetail(card);
+        }
+        return;
+    }
+
+    if (shouldIgnoreColumnCreateClick(event.target)) {
+        return;
+    }
+
+    const column = event.target.closest(".stage-column");
+    if (column?.dataset.stage) {
+        openModal(column.dataset.stage);
+    }
+}
+
+function handleBoardKeyDown(event) {
+    if (event.key !== "Enter" && event.key !== " ") {
+        return;
+    }
+
+    const column = event.target.closest(".stage-column");
+    if (!column || event.target !== column || !column.dataset.stage) {
+        return;
+    }
+
+    event.preventDefault();
+    openModal(column.dataset.stage);
+}
+
+function shouldIgnoreColumnCreateClick(target) {
+    return Boolean(target.closest(".study-card, button, a, input, select, textarea, label"));
 }
 
 function handleDragStart(event) {
@@ -521,7 +629,7 @@ async function openMoveModal(card, targetStage) {
     elements.moveFormFeedback.textContent = "";
     elements.moveEvidenceWarning.hidden = true;
 
-    if (targetStage === "REFINAMENTO") {
+    if (isEvidenceStage(card.estagio) && targetStage === "CONSOLIDACAO") {
         const evidence = await fetchEvidence(card.id);
         elements.moveEvidenceWarning.hidden = evidence.length > 0;
     }
@@ -546,6 +654,7 @@ async function openCardDetail(card) {
     elements.detailFormFeedback.textContent = "";
     resetResourceForm();
     resetEvidenceForm();
+    renderEvidenceAvailability(card);
     renderDetailProgress(card);
     elements.detailModalBackdrop.hidden = false;
     await loadCardArtifacts(card.id);
@@ -559,6 +668,7 @@ function closeDetailModal() {
     state.activeCard = null;
     state.resources = [];
     state.evidence = [];
+    elements.evidencePanel.hidden = false;
 }
 
 async function deleteActiveCard() {
@@ -592,18 +702,23 @@ async function deleteActiveCard() {
 
 async function loadCardArtifacts(cardId) {
     elements.resourcesList.innerHTML = `<div class="empty-stage">Carregando recursos...</div>`;
-    elements.evidenceList.innerHTML = `<div class="empty-stage">Carregando evidencias...</div>`;
+    const shouldLoadEvidence = shouldShowEvidencePanel();
+    if (shouldLoadEvidence) {
+        elements.evidenceList.innerHTML = `<div class="empty-stage">Carregando evidencias...</div>`;
+    }
 
     try {
         const [resources, evidence] = await Promise.all([
             fetchResources(cardId),
-            fetchEvidence(cardId)
+            shouldLoadEvidence ? fetchEvidence(cardId) : Promise.resolve([])
         ]);
 
         state.resources = resources;
         state.evidence = evidence;
         renderResources();
-        renderEvidence();
+        if (shouldLoadEvidence) {
+            renderEvidence();
+        }
     } catch (error) {
         elements.detailFormFeedback.textContent = `Nao foi possivel carregar o detalhe. ${error.message}`;
     }
@@ -668,7 +783,7 @@ async function saveResource(event) {
 async function saveEvidence(event) {
     event.preventDefault();
 
-    if (!state.activeCard) {
+    if (!state.activeCard || !shouldShowEvidencePanel()) {
         return;
     }
 
@@ -794,6 +909,25 @@ function resetEvidenceForm() {
     elements.cancelEvidenceEditButton.hidden = true;
 }
 
+function renderEvidenceAvailability(card) {
+    const isAvailable = isEvidenceStage(card.estagio);
+    elements.evidencePanel.hidden = !isAvailable;
+
+    if (!isAvailable) {
+        state.evidence = [];
+        elements.evidenceCount.textContent = "0";
+        elements.evidenceList.innerHTML = "";
+    }
+}
+
+function shouldShowEvidencePanel() {
+    return Boolean(state.activeCard && isEvidenceStage(state.activeCard.estagio));
+}
+
+function isEvidenceStage(stageKey) {
+    return normalizeStage(stageKey) === "REFINAMENTO";
+}
+
 function handleResourceAction(event) {
     const button = event.target.closest("[data-resource-action]");
     if (!button) {
@@ -908,7 +1042,7 @@ async function deleteArtifact(url, errorMessage) {
 }
 
 function renderDetailProgress(card) {
-    const progress = cardProgress(card.estagio);
+    const progress = cardProgress(normalizeStage(card.estagio));
     elements.detailProgressLabel.textContent = stageLabel(card.estagio);
     elements.detailProgressValue.textContent = `${progress.percent}%`;
     elements.detailProgressBar.style.width = `${progress.percent}%`;
@@ -940,24 +1074,144 @@ function renderTagPills(tags = []) {
         .join("");
 }
 
+function renderCardDescription(description) {
+    const normalizedDescription = normalizeWhitespace(description);
+    const shouldTruncate = normalizedDescription.length > CARD_DESCRIPTION_LIMIT;
+    const visibleDescription = shouldTruncate
+        ? `${normalizedDescription.slice(0, CARD_DESCRIPTION_LIMIT).trimEnd()}...`
+        : normalizedDescription;
+
+    return `
+        <p class="card-description" title="${escapeHtml(normalizedDescription)}" aria-label="${escapeHtml(normalizedDescription)}">
+            ${escapeHtml(visibleDescription)}
+        </p>
+    `;
+}
+
 function getVisibleCards() {
     return state.cards.filter((card) => {
-        const matchesContext = !state.filters.context ||
-            card.contexto.toLowerCase().includes(state.filters.context);
+        const searchableText = [card.titulo, card.contexto, card.descricao, ...(card.tags || []).map((tag) => tag.valor)]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+        const matchesContext = !state.filters.context || searchableText.includes(state.filters.context);
         const matchesPriority = !state.filters.priority ||
             card.prioridade === state.filters.priority;
+        const matchesStage = !state.filters.stage || normalizeStage(card.estagio) === state.filters.stage;
 
-        return matchesContext && matchesPriority;
+        return matchesContext && matchesPriority && matchesStage;
     });
 }
 
-function groupCardsByStage(cards) {
+function groupCardsByType(cards) {
     return cards.reduce((accumulator, card) => {
-        const stage = card.estagio || "GATILHO";
-        accumulator[stage] = accumulator[stage] || [];
-        accumulator[stage].push(card);
+        const type = card.tags?.find((tag) => tag.categoria === "TIPO")?.valor || card.contexto || "Sem tipo";
+        accumulator[type] = accumulator[type] || [];
+        accumulator[type].push(card);
         return accumulator;
     }, {});
+}
+
+function renderStudyTimeline(cards) {
+    if (!elements.studyTimeline) {
+        return;
+    }
+
+    const counts = cards.reduce((result, card) => {
+        const stage = normalizeStage(card.estagio);
+        result[stage] = (result[stage] || 0) + 1;
+        return result;
+    }, {});
+    const activeStageIndex = STAGES.findIndex((stage) => counts[stage.key] > 0);
+
+    elements.studyTimeline.innerHTML = STAGES.map((stage, index) => `
+        <button class="timeline-step ${state.filters.stage === stage.key ? "is-selected" : ""} ${index === activeStageIndex ? "is-current" : ""}" type="button" data-stage="${stage.key}" style="--stage-color: ${stage.color}" aria-pressed="${state.filters.stage === stage.key}">
+            <span class="timeline-marker">${index + 1}</span>
+            <div>
+                <strong>${stage.label}</strong>
+                <span>${stage.hint}</span>
+            </div>
+        </button>
+    `).join("");
+}
+
+function renderOrderControls(card) {
+    if (normalizeStage(card.estagio) === "ABSORVIDO") {
+        return "";
+    }
+
+    const groupCards = groupCardsByType(state.cards.filter((item) =>
+        normalizeStage(item.estagio) === normalizeStage(card.estagio) &&
+        normalizeStage(item.estagio) !== "ABSORVIDO"
+    ));
+    const groupName = card.tags?.find((tag) => tag.categoria === "TIPO")?.valor || card.contexto || "Sem tipo";
+    const siblings = (groupCards[groupName] || []).sort(sortCards);
+    const index = siblings.findIndex((item) => item.id === card.id);
+
+    return `<div class="card-order-controls" aria-label="Ordenar card">
+        <button class="card-order-button" type="button" data-direction="up" aria-label="Mover card para cima" ${index <= 0 ? "disabled" : ""}>&#8593;</button>
+        <button class="card-order-button" type="button" data-direction="down" aria-label="Mover card para baixo" ${index < 0 || index === siblings.length - 1 ? "disabled" : ""}>&#8595;</button>
+    </div>`;
+}
+
+async function reorderCard(card, direction) {
+    const groupName = card.tags?.find((tag) => tag.categoria === "TIPO")?.valor || card.contexto || "Sem tipo";
+    const stage = normalizeStage(card.estagio);
+    const siblings = (groupCardsByType(state.cards.filter((item) =>
+        normalizeStage(item.estagio) === stage &&
+        (item.tags?.find((tag) => tag.categoria === "TIPO")?.valor || item.contexto || "Sem tipo") === groupName
+    ))[groupName] || []).sort(sortCards);
+    const currentIndex = siblings.findIndex((item) => item.id === card.id);
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= siblings.length) {
+        return;
+    }
+
+    [siblings[currentIndex], siblings[targetIndex]] = [siblings[targetIndex], siblings[currentIndex]];
+    setBoardStatus("Salvando nova ordem...");
+
+    try {
+        const savedCards = await Promise.all(siblings.map(async (item, index) => {
+            const response = await fetch(`${API.cards}/${item.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify(cardPayload(item, index))
+            });
+            if (!response.ok) {
+                throw new Error("Nao foi possivel salvar a nova ordem.");
+            }
+            return response.json();
+        }));
+
+        state.cards = state.cards.map((item) => savedCards.find((saved) => saved.id === item.id) || item);
+        setBoardStatus("Ordem atualizada.");
+        renderBoard();
+    } catch (error) {
+        setBoardStatus(error.message);
+    }
+}
+
+function cardPayload(card, orderIndex) {
+    return {
+        titulo: card.titulo,
+        contexto: card.contexto,
+        prioridade: card.prioridade,
+        descricao: card.descricao,
+        estagio: card.estagio,
+        orderIndex,
+        tags: card.tags.map((tag) => ({ categoria: tag.categoria, valor: tag.valor }))
+    };
+}
+
+function nextStageButton(card) {
+    const currentIndex = STAGES.findIndex((stage) => stage.key === normalizeStage(card.estagio));
+    const nextStage = STAGES[currentIndex + 1];
+    if (!nextStage) {
+        return "";
+    }
+
+    return `<button class="card-next-button" type="button" data-next-stage="${nextStage.key}">Avancar</button>`;
 }
 
 function sortCards(first, second) {
@@ -971,16 +1225,35 @@ function sortCards(first, second) {
     return String(second.createdAt).localeCompare(String(first.createdAt));
 }
 
+function sortStudyPlanCards(first, second) {
+    const firstStage = STAGES.findIndex((stage) => stage.key === normalizeStage(first.estagio));
+    const secondStage = STAGES.findIndex((stage) => stage.key === normalizeStage(second.estagio));
+
+    if (firstStage !== secondStage) {
+        return firstStage - secondStage;
+    }
+
+    return sortCards(first, second);
+}
+
 function stageLabel(stageKey) {
-    return STAGES.find((stage) => stage.key === stageKey)?.label || stageKey;
+    return STAGES.find((stage) => stage.key === normalizeStage(stageKey))?.label || stageKey;
 }
 
 function cardProgress(stageKey) {
-    const stageIndex = STAGES.findIndex((stage) => stage.key === stageKey);
+    const stageIndex = STAGES.findIndex((stage) => stage.key === normalizeStage(stageKey));
     const safeIndex = stageIndex >= 0 ? stageIndex : 0;
     const percent = Math.round(((safeIndex + 1) / STAGES.length) * 100);
 
     return { index: safeIndex, percent };
+}
+
+function normalizeStage(stageKey) {
+    if (stageKey === "GATILHO" || stageKey === "CAPTURA" || !stageKey) {
+        return "TRIAGEM";
+    }
+
+    return stageKey;
 }
 
 function priorityLabel(priority) {
@@ -1025,13 +1298,17 @@ function setBoardStatus(message) {
     elements.boardStatus.textContent = message;
 }
 
-function openModal() {
+function openModal(targetStage = "TRIAGEM", suggestedType = "") {
+    const normalizedStage = normalizeStage(targetStage);
     state.editingCardId = null;
-    elements.modalTitle.textContent = "Novo estudo";
-    elements.modalSubtitle.textContent = "Registre o problema que iniciou o estudo.";
-    elements.saveCardButton.textContent = "Criar estudo";
+    state.creatingStage = normalizedStage;
+    elements.modalTitle.textContent = "Novo card de estudo";
+    elements.modalSubtitle.textContent = `Comece em ${stageLabel(normalizedStage)} e avance o card conforme praticar e registrar o que aprendeu.`;
+    elements.saveCardButton.textContent = "Criar card";
     elements.createCardForm.reset();
     elements.priorityInput.value = "MEDIA";
+    elements.contextInput.value = "Geral";
+    elements.typesInput.value = suggestedType;
     clearFormErrors();
     elements.modalBackdrop.hidden = false;
     elements.titleInput.focus();
@@ -1044,8 +1321,8 @@ function openEditCardModal() {
 
     const card = state.activeCard;
     state.editingCardId = card.id;
-    elements.modalTitle.textContent = "Editar estudo";
-    elements.modalSubtitle.textContent = "Ajuste titulo, contexto, prioridade, descricao e tags.";
+    elements.modalTitle.textContent = "Editar card";
+    elements.modalSubtitle.textContent = "Ajuste o card e mantenha-o no assunto certo.";
     elements.saveCardButton.textContent = "Salvar alteracoes";
     elements.titleInput.value = card.titulo;
     elements.contextInput.value = card.contexto;
@@ -1053,6 +1330,7 @@ function openEditCardModal() {
     elements.descriptionInput.value = card.descricao || "";
     elements.languagesInput.value = tagsByCategory(card.tags, "LINGUAGEM");
     elements.typesInput.value = tagsByCategory(card.tags, "TIPO");
+    elements.createCardForm.querySelector(".form-details").open = true;
     clearFormErrors();
     closeDetailModal();
     elements.modalBackdrop.hidden = false;
@@ -1063,10 +1341,13 @@ function closeModal() {
     elements.modalBackdrop.hidden = true;
     elements.createCardForm.reset();
     elements.priorityInput.value = "MEDIA";
+    elements.contextInput.value = "Geral";
+    elements.createCardForm.querySelector(".form-details").open = false;
+    state.creatingStage = "TRIAGEM";
     state.editingCardId = null;
-    elements.modalTitle.textContent = "Novo estudo";
-    elements.modalSubtitle.textContent = "Registre o problema que iniciou o estudo.";
-    elements.saveCardButton.textContent = "Criar estudo";
+    elements.modalTitle.textContent = "Novo card de estudo";
+    elements.modalSubtitle.textContent = "Registre o proximo ponto que voce quer estudar.";
+    elements.saveCardButton.textContent = "Criar card";
     clearFormErrors();
 }
 
@@ -1075,6 +1356,10 @@ function tagsByCategory(tags = [], category) {
         .filter((tag) => tag.categoria === category)
         .map((tag) => tag.valor)
         .join(", ");
+}
+
+function normalizeWhitespace(value) {
+    return String(value).replace(/\s+/g, " ").trim();
 }
 
 function escapeHtml(value) {

@@ -1,8 +1,7 @@
 package org.example.flowstudy.studycard.domain.model.enums
 
 enum class Estagio {
-    GATILHO,
-    CAPTURA,
+    TRIAGEM,
     ESTUDO_ATIVO,
     APLICACAO,
     REFINAMENTO,

@@ -10,7 +10,7 @@ data class StudyCardRequest(
     val descricao: String? = null,
     val contexto: String,
     val prioridade: Prioridade = Prioridade.MEDIA,
-    val estagio: Estagio = Estagio.GATILHO,
+    val estagio: Estagio = Estagio.TRIAGEM,
     val orderIndex: Int = 0,
     val tags: List<CardTagRequest> = emptyList()
 )

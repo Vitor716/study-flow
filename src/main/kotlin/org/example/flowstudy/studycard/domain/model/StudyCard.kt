@@ -23,7 +23,7 @@ class StudyCard {
     var prioridade: Prioridade = Prioridade.MEDIA
 
     @Enumerated(EnumType.STRING)
-    var estagio: Estagio = Estagio.GATILHO
+    var estagio: Estagio = Estagio.TRIAGEM
 
     @Column(name = "order_index")
     var orderIndex: Int = 0

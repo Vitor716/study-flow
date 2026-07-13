@@ -156,6 +156,7 @@ object Database {
         Flyway.configure()
             .dataSource(databaseUrl, null, null)
             .locations("classpath:db/migration")
+            .mixed(true)
             .load()
             .migrate()
     }
@@ -562,7 +563,7 @@ data class StudyCardRequest(
     val descricao: String? = null,
     val contexto: String,
     val prioridade: String = "MEDIA",
-    val estagio: String = "GATILHO",
+    val estagio: String = "TRIAGEM",
     val orderIndex: Int = 0,
     val tags: List<CardTagRequest> = emptyList()
 )

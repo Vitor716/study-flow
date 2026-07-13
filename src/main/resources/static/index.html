@@ -11,8 +11,8 @@
         <header class="topbar">
             <div class="topbar-copy">
                 <p class="eyebrow">Study Flow</p>
-                <h1>Fluxo de estudos</h1>
-                <p class="topbar-subtitle">Organize assuntos, acompanhe progresso e mantenha o foco no proximo passo.</p>
+                <h1>Plano de estudo</h1>
+                <p class="topbar-subtitle">Transforme um gatilho em cards de estudo e avance cada um ate consolidar o aprendizado.</p>
             </div>
             <div class="topbar-actions">
                 <button class="icon-action ghost-button" id="refreshButton" type="button" aria-label="Atualizar estudos" data-tooltip="Atualizar">
@@ -28,8 +28,8 @@
             <section class="board-section" aria-label="Pipeline">
                 <div class="command-bar" aria-label="Controles do fluxo">
                     <label class="search-field">
-                        <span>Buscar contexto</span>
-                        <input id="contextFilter" type="search" placeholder="Kotlin, Spring, SQL">
+                        <span>Buscar estudo</span>
+                        <input id="contextFilter" type="search" placeholder="Assunto ou card">
                     </label>
 
                     <label class="select-field">
@@ -58,14 +58,36 @@
                     </div>
                 </div>
 
-                <div class="board-toolbar">
-                    <div>
-                        <h2>Pipeline</h2>
-                        <p>Acompanhe cada assunto do primeiro gatilho ate a consolidacao do conhecimento.</p>
+                <section class="study-plan" aria-labelledby="studyPlanTitle">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Ciclo de cada card</p>
+                            <h2 id="studyPlanTitle">Do gatilho ao conhecimento consolidado</h2>
+                        </div>
+                        <div class="board-status" id="boardStatus" role="status">Carregando estudos...</div>
                     </div>
-                    <div class="board-status" id="boardStatus" role="status">Carregando cards...</div>
+                    <div class="study-timeline" id="studyTimeline" aria-label="Etapas do plano de estudo"></div>
+                </section>
+
+                    <div class="board-toolbar">
+                    <div>
+                        <p class="eyebrow">Assuntos</p>
+                        <h2>Cards por assunto de estudo</h2>
+                        <p>Use um assunto como gatilho, como “Padroes de resiliencia”, e mantenha seus cards de estudo juntos.</p>
+                    </div>
+                    <button class="ghost-button clear-stage-filter" id="clearStageFilterButton" type="button" hidden>Ver todas as etapas</button>
                 </div>
                 <div class="board" id="board"></div>
+                <section class="consolidated-section" id="consolidatedSection" hidden aria-labelledby="consolidatedTitle">
+                    <div class="board-toolbar">
+                        <div>
+                            <p class="eyebrow">Biblioteca</p>
+                            <h2 id="consolidatedTitle">Conhecimento consolidado</h2>
+                            <p>Cards que ja podem ser recuperados e aplicados sem consulta direta.</p>
+                        </div>
+                    </div>
+                    <div class="board consolidated-board" id="consolidatedBoard"></div>
+                </section>
             </section>
         </main>
     </div>
@@ -74,9 +96,9 @@
         <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <div class="modal-header">
                 <div>
-                    <p class="eyebrow">Gatilho inicial</p>
-                    <h2 id="modalTitle">Novo estudo</h2>
-                    <p class="modal-subtitle" id="modalSubtitle">Registre o problema que iniciou o estudo.</p>
+                    <p class="eyebrow">Novo card</p>
+                    <h2 id="modalTitle">Novo card de estudo</h2>
+                    <p class="modal-subtitle" id="modalSubtitle">Registre o proximo ponto que voce quer estudar.</p>
                 </div>
                 <button class="icon-button" id="closeModalButton" type="button" aria-label="Fechar">x</button>
             </div>
@@ -84,15 +106,14 @@
             <form id="createCardForm" novalidate>
                 <div class="form-grid">
                     <label class="field wide">
-                        <span>Titulo</span>
-                        <input id="titleInput" name="titulo" type="text" maxlength="140" required>
+                        <span>O que voce vai estudar?</span>
+                        <input id="titleInput" name="titulo" type="text" maxlength="140" placeholder="Ex.: Retry + Idempotencia" required>
                         <small class="field-error" data-error-for="titulo"></small>
                     </label>
 
                     <label class="field">
-                        <span>Contexto</span>
-                        <input id="contextInput" name="contexto" type="text" maxlength="80" required>
-                        <small class="field-error" data-error-for="contexto"></small>
+                        <span>Assunto</span>
+                        <input id="typesInput" name="tipos" type="text" maxlength="80" placeholder="Ex.: Padroes de resiliencia">
                     </label>
 
                     <label class="field">
@@ -105,27 +126,31 @@
                         <small class="field-error" data-error-for="prioridade"></small>
                     </label>
 
-                    <label class="field wide">
-                        <span>Descricao</span>
-                        <textarea id="descriptionInput" name="descricao" rows="4"></textarea>
-                    </label>
-
-                    <label class="field">
-                        <span>Linguagens</span>
-                        <input id="languagesInput" name="linguagens" type="text" placeholder="Kotlin, SQL">
-                    </label>
-
-                    <label class="field">
-                        <span>Tipos</span>
-                        <input id="typesInput" name="tipos" type="text" placeholder="endpoint, refatoracao">
-                    </label>
+                    <details class="form-details wide">
+                        <summary>Adicionar contexto e anotacoes</summary>
+                        <div class="form-grid form-grid-nested">
+                            <label class="field">
+                                <span>Contexto</span>
+                                <input id="contextInput" name="contexto" type="text" maxlength="80" value="Geral">
+                                <small class="field-error" data-error-for="contexto"></small>
+                            </label>
+                            <label class="field">
+                                <span>Linguagens</span>
+                                <input id="languagesInput" name="linguagens" type="text" placeholder="Kotlin, SQL">
+                            </label>
+                            <label class="field wide">
+                                <span>Descricao</span>
+                                <textarea id="descriptionInput" name="descricao" rows="3" placeholder="O que voce quer entender ou praticar?"></textarea>
+                            </label>
+                        </div>
+                    </details>
                 </div>
 
                 <div class="form-feedback" id="formFeedback" role="alert"></div>
 
                 <div class="modal-actions">
                     <button class="ghost-button" id="cancelCreateButton" type="button">Cancelar</button>
-                    <button class="primary-button" id="saveCardButton" type="submit">Criar estudo</button>
+                    <button class="primary-button" id="saveCardButton" type="submit">Criar card</button>
                 </div>
             </form>
         </section>
@@ -213,6 +238,8 @@
                         <span id="resourcesCount">0</span>
                     </div>
                     <div class="resource-gallery" id="resourcesList"></div>
+                    <details class="artifact-composer">
+                        <summary>Adicionar recurso</summary>
                     <form class="artifact-form" id="resourceForm">
                         <div class="artifact-form-header">
                             <span class="artifact-form-icon link-icon" aria-hidden="true"></span>
@@ -253,9 +280,10 @@
                             <button class="primary-button" id="saveResourceButton" type="submit">Adicionar recurso</button>
                         </div>
                     </form>
+                    </details>
                 </section>
 
-                <section class="detail-panel evidence-panel">
+                <section class="detail-panel evidence-panel" id="evidencePanel">
                     <div class="panel-header panel-header-rich">
                         <div>
                             <p class="eyebrow">Fechamento do ciclo</p>
@@ -265,6 +293,8 @@
                         <span id="evidenceCount">0</span>
                     </div>
                     <div class="detail-list" id="evidenceList"></div>
+                    <details class="artifact-composer">
+                        <summary>Adicionar evidencia</summary>
                     <form class="artifact-form" id="evidenceForm">
                         <div class="artifact-form-header">
                             <span class="artifact-form-icon evidence-icon" aria-hidden="true"></span>
@@ -299,6 +329,7 @@
                             <button class="primary-button" id="saveEvidenceButton" type="submit">Adicionar evidencia</button>
                         </div>
                     </form>
+                    </details>
                 </section>
             </div>
 

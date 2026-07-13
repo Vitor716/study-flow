@@ -17,11 +17,11 @@ class StageHistory {
 
     @Column(name = "from_stage")
     @Enumerated(EnumType.STRING)
-    var fromEstage: Estagio = Estagio.GATILHO
+    var fromEstage: Estagio = Estagio.TRIAGEM
 
     @Column(name = "to_stage")
     @Enumerated(EnumType.STRING)
-    var toEstage: Estagio = Estagio.GATILHO
+    var toEstage: Estagio = Estagio.TRIAGEM
 
     var razao: String = ""
 
