@@ -11,8 +11,8 @@
         <header class="topbar">
             <div class="topbar-copy">
                 <p class="eyebrow">Study Flow</p>
-                <h1>Plano de estudo</h1>
-                <p class="topbar-subtitle">Transforme um gatilho em cards de estudo e avance cada um ate consolidar o aprendizado.</p>
+                <h1>Seus estudos</h1>
+                <p class="topbar-subtitle">Uma proxima acao por vez, do estudo ativo a consolidacao.</p>
             </div>
             <div class="topbar-actions">
                 <button class="icon-action ghost-button" id="openObsidianConfigButton" type="button" aria-label="Configurar Obsidian" data-tooltip="Obsidian">
@@ -27,8 +27,21 @@
                 <button class="icon-action ghost-button" id="refreshButton" type="button" aria-label="Atualizar estudos" data-tooltip="Atualizar">
                     <span class="icon refresh-icon" aria-hidden="true"></span>
                 </button>
-                <button class="icon-action primary-button" id="openCreateModalButton" type="button" aria-label="Novo estudo" data-tooltip="Novo estudo">
+                <button class="icon-action ghost-button" id="openImportJsonButton" type="button" aria-label="Importar cards por JSON" data-tooltip="Importar JSON">
+                    <span class="icon upload-icon" aria-hidden="true"></span>
+                </button>
+                <button class="icon-action ghost-button" id="openTagsButton" type="button" aria-label="Visualizar tags" data-tooltip="Tags">
+                    <span class="icon tag-icon" aria-hidden="true"></span>
+                </button>
+                <button class="icon-action ghost-button" id="toggleBulkDeleteButton" type="button" aria-label="Selecionar cards" data-tooltip="Selecionar">
+                    <span class="icon select-icon" aria-hidden="true"></span>
+                </button>
+                <button class="icon-action danger-button" id="deleteSelectedCardsButton" type="button" aria-label="Apagar cards selecionados" data-tooltip="Apagar selecionados" hidden>
+                    <span class="icon trash-icon" aria-hidden="true"></span>
+                </button>
+                <button class="new-study-button primary-button" id="openCreateModalButton" type="button" aria-label="Novo estudo">
                     <span class="icon plus-icon" aria-hidden="true"></span>
+                    <span>Novo estudo</span>
                 </button>
             </div>
         </header>
@@ -67,6 +80,15 @@
                     </div>
                 </div>
 
+                <section class="next-action" id="nextAction" aria-labelledby="nextActionTitle">
+                    <div class="next-action-copy">
+                        <p class="eyebrow">Proxima acao</p>
+                        <h2 id="nextActionTitle">Organizando seus estudos...</h2>
+                        <p id="nextActionDescription">Escolha um card para continuar.</p>
+                    </div>
+                    <button class="primary-button" id="nextActionButton" type="button" disabled>Continuar</button>
+                </section>
+
                 <section class="study-plan" aria-labelledby="studyPlanTitle">
                     <div class="section-heading">
                         <div>
@@ -78,11 +100,11 @@
                     <div class="study-timeline" id="studyTimeline" aria-label="Etapas do plano de estudo"></div>
                 </section>
 
-                    <div class="board-toolbar">
+                <div class="board-toolbar">
                     <div>
-                        <p class="eyebrow">Assuntos</p>
-                        <h2>Cards por assunto de estudo</h2>
-                        <p>Use um assunto como gatilho, como “Padroes de resiliencia”, e mantenha seus cards de estudo juntos.</p>
+                        <p class="eyebrow">Contextos</p>
+                        <h2>Cards por contexto de estudo</h2>
+                        <p>Use um assunto como gatilho, como "Padroes de resiliencia", e mantenha seus cards de estudo juntos.</p>
                     </div>
                     <button class="ghost-button clear-stage-filter" id="clearStageFilterButton" type="button" hidden>Ver todas as etapas</button>
                 </div>
@@ -231,6 +253,61 @@
         </section>
     </div>
 
+    <div class="modal-backdrop" id="importJsonBackdrop" hidden>
+        <section class="modal modal-compact import-json-modal" role="dialog" aria-modal="true" aria-labelledby="importJsonTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Lote</p>
+                    <h2 id="importJsonTitle">Importar cards por JSON</h2>
+                    <p class="modal-subtitle">Cole um array de cards ou um objeto com a propriedade cards.</p>
+                </div>
+                <button class="icon-button" id="closeImportJsonButton" type="button" aria-label="Fechar">x</button>
+            </div>
+
+            <form id="importJsonForm">
+                <label class="field wide">
+                    <span>Arquivo JSON</span>
+                    <input id="importJsonFileInput" name="jsonFile" type="file" accept="application/json,.json">
+                    <small class="field-hint">Ao escolher um arquivo, o conteudo sera carregado no campo abaixo para revisao antes de importar.</small>
+                </label>
+                <label class="field wide">
+                    <span>JSON</span>
+                    <textarea id="importJsonInput" name="json" rows="14" spellcheck="false" required></textarea>
+                    <small class="field-hint">Campos: titulo, contexto, descricao, prioridade, estagio, orderIndex, tags e recursos.</small>
+                </label>
+
+                <div class="form-feedback import-json-feedback" id="importJsonFeedback" role="alert"></div>
+
+                <div class="modal-actions">
+                    <button class="ghost-button" id="fillImportJsonExampleButton" type="button">Usar exemplo</button>
+                    <button class="ghost-button" id="cancelImportJsonButton" type="button">Cancelar</button>
+                    <button class="primary-button" id="submitImportJsonButton" type="submit">Importar cards</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="tagsBackdrop" hidden>
+        <section class="modal modal-compact tags-modal" role="dialog" aria-modal="true" aria-labelledby="tagsTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Tags</p>
+                    <h2 id="tagsTitle">Tags cadastradas</h2>
+                    <p class="modal-subtitle" id="tagsSummary">Carregando tags...</p>
+                </div>
+                <button class="icon-button" id="closeTagsButton" type="button" aria-label="Fechar">x</button>
+            </div>
+
+            <div class="tags-toolbar">
+                <label class="search-field">
+                    <span>Buscar tag</span>
+                    <input id="tagsFilterInput" type="search" placeholder="Linguagem, tipo ou valor">
+                </label>
+            </div>
+            <div class="tags-list" id="tagsList"></div>
+        </section>
+    </div>
+
     <div class="modal-backdrop" id="modalBackdrop" hidden>
         <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <div class="modal-header">
@@ -251,7 +328,7 @@
                     </label>
 
                     <label class="field">
-                        <span>Assunto</span>
+                        <span>Tags</span>
                         <input id="typesInput" name="tipos" type="text" maxlength="80" placeholder="Ex.: Padroes de resiliencia">
                     </label>
 
@@ -367,7 +444,22 @@
             </div>
 
             <div class="detail-stack">
-                <section class="detail-panel mvp2-panel">
+                <section class="detail-panel detail-current" id="detailCurrent">
+                    <div class="panel-header panel-header-rich">
+                        <div>
+                            <p class="eyebrow" id="detailCurrentKicker">Agora</p>
+                            <h3 id="detailCurrentTitle">Defina o proximo passo</h3>
+                            <p id="detailCurrentDescription">Organize este estudo em uma acao simples.</p>
+                        </div>
+                        <span id="detailCurrentStatus">Pendente</span>
+                    </div>
+                    <div class="current-checklist" id="detailCurrentChecklist"></div>
+                    <div class="artifact-form-actions">
+                        <button class="primary-button" id="advanceCardButton" type="button">Avancar</button>
+                    </div>
+                </section>
+
+                <section class="detail-panel mvp2-panel" data-detail-stages="CONSOLIDACAO ABSORVIDO">
                     <div class="panel-header panel-header-rich">
                         <div>
                             <p class="eyebrow">MVP2</p>
@@ -394,7 +486,7 @@
                     </div>
                 </section>
 
-                <section class="detail-panel checklist-panel" id="checklistPanel">
+                <section class="detail-panel checklist-panel" id="checklistPanel" data-detail-stages="CONSOLIDACAO ABSORVIDO">
                     <div class="panel-header panel-header-rich">
                         <div>
                             <p class="eyebrow">Checklist</p>
@@ -406,39 +498,39 @@
                     <div class="checklist-list" id="qualityChecklist"></div>
                 </section>
 
-                <section class="detail-panel anki-panel">
+                <section class="detail-panel anki-panel" data-detail-stages="CONSOLIDACAO ABSORVIDO">
                     <div class="panel-header panel-header-rich">
                         <div>
                             <p class="eyebrow">AnkiConnect</p>
-                            <h3>Notas do Anki</h3>
-                            <p id="ankiCardStatus">Crie notas no deck configurado e sincronize mature.</p>
+                            <h3>Flashcards do Anki</h3>
+                            <p id="ankiCardStatus">Crie um flashcard e acompanhe o status de revisao.</p>
                         </div>
                         <span id="ankiCardBadge">Local</span>
                     </div>
                     <form class="artifact-form" id="ankiNoteForm">
                         <div class="artifact-form-grid">
                             <label class="field">
-                                <span>Frente</span>
+                                <span>Pergunta obrigatoria</span>
                                 <textarea id="ankiFrontInput" name="front" rows="3" required></textarea>
                             </label>
                             <label class="field">
-                                <span>Verso</span>
+                                <span>Resposta obrigatoria</span>
                                 <textarea id="ankiBackInput" name="back" rows="3" required></textarea>
                             </label>
                         </div>
                         <div class="artifact-form-actions">
-                            <button class="ghost-button" id="syncAnkiMatureButton" type="button">Sincronizar mature</button>
-                            <button class="primary-button" type="submit">Criar nota</button>
+                            <button class="ghost-button" id="syncAnkiMatureButton" type="button">Atualizar status</button>
+                            <button class="primary-button" type="submit">Salvar no Anki</button>
                         </div>
                     </form>
                     <div class="detail-list anki-notes-list" id="ankiNotesList"></div>
                 </section>
 
-                <section class="detail-panel obsidian-panel">
+                <section class="detail-panel obsidian-panel" data-detail-stages="REFINAMENTO">
                     <div class="panel-header panel-header-rich">
                         <div>
                             <p class="eyebrow">Obsidian</p>
-                            <h3>Nota do card</h3>
+                            <h3>Nota de estudo</h3>
                             <p id="obsidianCardStatus">Configure o vault para criar e abrir a nota Markdown.</p>
                         </div>
                         <span id="obsidianCardBadge">Off</span>
@@ -446,14 +538,14 @@
                     <div class="obsidian-note-row">
                         <code id="obsidianCardPath">Sem nota vinculada</code>
                         <div class="artifact-actions">
-                            <button class="ghost-button" id="createObsidianNoteButton" type="button">Criar ou vincular</button>
+                            <button class="ghost-button" id="createObsidianNoteButton" type="button">Criar nota</button>
                             <button class="ghost-button" id="createObsidianAlternativeButton" type="button" hidden>Criar copia</button>
                             <button class="primary-button" id="openObsidianNoteButton" type="button" hidden>Abrir no Obsidian</button>
                         </div>
                     </div>
                 </section>
 
-                <section class="detail-panel resources-panel">
+                <section class="detail-panel resources-panel" data-detail-stages="TRIAGEM ESTUDO_ATIVO APLICACAO">
                     <div class="panel-header panel-header-rich">
                         <div>
                             <p class="eyebrow">Referencias de estudo</p>
@@ -508,7 +600,7 @@
                     </details>
                 </section>
 
-                <section class="detail-panel evidence-panel" id="evidencePanel">
+                <section class="detail-panel evidence-panel" id="evidencePanel" data-detail-stages="APLICACAO REFINAMENTO">
                     <div class="panel-header panel-header-rich">
                         <div>
                             <p class="eyebrow">Fechamento do ciclo</p>

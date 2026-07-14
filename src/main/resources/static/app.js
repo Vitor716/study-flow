@@ -1,5 +1,7 @@
 const API = {
     cards: "/api/study-card",
+    cardImport: "/api/study-card/import",
+    cardDeleteBatch: "/api/study-card/delete-batch",
     obsidianConfig: "/api/obsidian/config",
     ankiConfig: "/api/anki/config",
     ankiStatus: "/api/anki/status",
@@ -36,10 +38,23 @@ const STAGES = [
     { key: "ABSORVIDO", label: "Consolidado", hint: "Use com autonomia", detail: "Voce consegue recuperar e transferir o conhecimento.", color: "#8fd7d2" }
 ];
 
+const STAGE_GUIDANCE = {
+    TRIAGEM: { title: "Defina um ponto de partida", description: "Escolha um objetivo pequeno e os materiais que vao orientar seu estudo.", next: "Comecar a estudar", checklist: ["Escreva o objetivo em uma frase.", "Adicione ao menos um material ou tarefa."] },
+    ESTUDO_ATIVO: { title: "Estude com uma saida em mente", description: "Consuma o material para responder ou explicar algo com suas proprias palavras.", next: "Levar para pratica", checklist: ["Use os materiais selecionados.", "Defina uma pratica pequena para testar o entendimento."] },
+    APLICACAO: { title: "Transforme entendimento em pratica", description: "Teste a ideia em codigo, exemplo, decisao ou comparacao concreta.", next: "Registrar resultado", checklist: ["Produza um resultado observavel.", "Registre uma evidencia ativa antes de seguir."] },
+    REFINAMENTO: { title: "Registre o que voce aprendeu", description: "Sintetize a conclusao para recuperar a ideia sem consultar a fonte.", next: "Preparar revisao", checklist: ["Salve uma evidencia ativa.", "Opcional: crie uma nota de estudo no Obsidian."] },
+    CONSOLIDACAO: { title: "Prepare a recuperacao", description: "Converta o essencial em flashcards e acompanhe a proxima revisao sem criar divida.", next: "Marcar como consolidado", checklist: ["Crie ou registre seus flashcards.", "Revise quando o card entrar na fila sugerida."] },
+    ABSORVIDO: { title: "Conhecimento consolidado", description: "Voce consegue recuperar e aplicar esta ideia em um contexto novo.", next: "Consolidado", checklist: ["Mantenha este card como referencia.", "Volte ao fluxo se precisar aprofundar."] }
+};
+
 const CARD_DESCRIPTION_LIMIT = 90;
 
 const state = {
     cards: [],
+    reorderingCardId: null,
+    collapsedGroups: new Set(),
+    bulkDeleteMode: false,
+    selectedCardIds: new Set(),
     draggedCardId: null,
     pendingMove: null,
     activeCard: null,
@@ -72,10 +87,31 @@ const elements = {
     totalCards: document.querySelector("#totalCards"),
     highPriorityCards: document.querySelector("#highPriorityCards"),
     visibleCardsLabel: document.querySelector("#visibleCardsLabel"),
+    nextActionTitle: document.querySelector("#nextActionTitle"),
+    nextActionDescription: document.querySelector("#nextActionDescription"),
+    nextActionButton: document.querySelector("#nextActionButton"),
     contextFilter: document.querySelector("#contextFilter"),
     priorityFilter: document.querySelector("#priorityFilter"),
     refreshButton: document.querySelector("#refreshButton"),
     openCreateModalButton: document.querySelector("#openCreateModalButton"),
+    openImportJsonButton: document.querySelector("#openImportJsonButton"),
+    openTagsButton: document.querySelector("#openTagsButton"),
+    toggleBulkDeleteButton: document.querySelector("#toggleBulkDeleteButton"),
+    deleteSelectedCardsButton: document.querySelector("#deleteSelectedCardsButton"),
+    importJsonBackdrop: document.querySelector("#importJsonBackdrop"),
+    closeImportJsonButton: document.querySelector("#closeImportJsonButton"),
+    cancelImportJsonButton: document.querySelector("#cancelImportJsonButton"),
+    fillImportJsonExampleButton: document.querySelector("#fillImportJsonExampleButton"),
+    importJsonForm: document.querySelector("#importJsonForm"),
+    importJsonFileInput: document.querySelector("#importJsonFileInput"),
+    importJsonInput: document.querySelector("#importJsonInput"),
+    importJsonFeedback: document.querySelector("#importJsonFeedback"),
+    submitImportJsonButton: document.querySelector("#submitImportJsonButton"),
+    tagsBackdrop: document.querySelector("#tagsBackdrop"),
+    closeTagsButton: document.querySelector("#closeTagsButton"),
+    tagsSummary: document.querySelector("#tagsSummary"),
+    tagsFilterInput: document.querySelector("#tagsFilterInput"),
+    tagsList: document.querySelector("#tagsList"),
     openAnkiConfigButton: document.querySelector("#openAnkiConfigButton"),
     openBackupConfigButton: document.querySelector("#openBackupConfigButton"),
     backupConfigBackdrop: document.querySelector("#backupConfigBackdrop"),
@@ -149,6 +185,13 @@ const elements = {
     detailProgressLabel: document.querySelector("#detailProgressLabel"),
     detailProgressValue: document.querySelector("#detailProgressValue"),
     detailProgressBar: document.querySelector("#detailProgressBar"),
+    detailCurrent: document.querySelector("#detailCurrent"),
+    detailCurrentKicker: document.querySelector("#detailCurrentKicker"),
+    detailCurrentTitle: document.querySelector("#detailCurrentTitle"),
+    detailCurrentDescription: document.querySelector("#detailCurrentDescription"),
+    detailCurrentStatus: document.querySelector("#detailCurrentStatus"),
+    detailCurrentChecklist: document.querySelector("#detailCurrentChecklist"),
+    advanceCardButton: document.querySelector("#advanceCardButton"),
     resourcesCount: document.querySelector("#resourcesCount"),
     resourcesList: document.querySelector("#resourcesList"),
     resourceForm: document.querySelector("#resourceForm"),
@@ -209,6 +252,17 @@ document.addEventListener("DOMContentLoaded", () => {
 function bindEvents() {
     elements.refreshButton.addEventListener("click", loadCards);
     elements.openCreateModalButton.addEventListener("click", () => openModal());
+    elements.openImportJsonButton.addEventListener("click", openImportJsonModal);
+    elements.openTagsButton.addEventListener("click", openTagsModal);
+    elements.toggleBulkDeleteButton.addEventListener("click", toggleBulkDeleteMode);
+    elements.deleteSelectedCardsButton.addEventListener("click", deleteSelectedCards);
+    elements.closeImportJsonButton.addEventListener("click", closeImportJsonModal);
+    elements.cancelImportJsonButton.addEventListener("click", closeImportJsonModal);
+    elements.fillImportJsonExampleButton.addEventListener("click", fillImportJsonExample);
+    elements.importJsonForm.addEventListener("submit", importCardsFromJson);
+    elements.importJsonFileInput.addEventListener("change", loadImportJsonFile);
+    elements.closeTagsButton.addEventListener("click", closeTagsModal);
+    elements.tagsFilterInput.addEventListener("input", renderTagsModal);
     elements.openAnkiConfigButton.addEventListener("click", openAnkiConfigModal);
     elements.openBackupConfigButton.addEventListener("click", openBackupConfigModal);
     elements.closeBackupConfigButton.addEventListener("click", closeBackupConfigModal);
@@ -233,6 +287,8 @@ function bindEvents() {
     elements.cancelMoveButton.addEventListener("click", closeMoveModal);
     elements.editCardButton.addEventListener("click", openEditCardModal);
     elements.deleteCardButton.addEventListener("click", deleteActiveCard);
+    elements.advanceCardButton.addEventListener("click", advanceActiveCard);
+    elements.nextActionButton.addEventListener("click", openNextActionCard);
     elements.closeDetailModalButton.addEventListener("click", closeDetailModal);
     elements.modalBackdrop.addEventListener("click", (event) => {
         if (event.target === elements.modalBackdrop) {
@@ -257,6 +313,16 @@ function bindEvents() {
     elements.backupConfigBackdrop.addEventListener("click", (event) => {
         if (event.target === elements.backupConfigBackdrop) {
             closeBackupConfigModal();
+        }
+    });
+    elements.importJsonBackdrop.addEventListener("click", (event) => {
+        if (event.target === elements.importJsonBackdrop) {
+            closeImportJsonModal();
+        }
+    });
+    elements.tagsBackdrop.addEventListener("click", (event) => {
+        if (event.target === elements.tagsBackdrop) {
+            closeTagsModal();
         }
     });
 
@@ -323,6 +389,14 @@ function bindEvents() {
 
         if (!elements.backupConfigBackdrop.hidden) {
             closeBackupConfigModal();
+        }
+
+        if (!elements.importJsonBackdrop.hidden) {
+            closeImportJsonModal();
+        }
+
+        if (!elements.tagsBackdrop.hidden) {
+            closeTagsModal();
         }
 
         if (!elements.moveModalBackdrop.hidden) {
@@ -602,7 +676,7 @@ function closeAnkiConfigModal() {
 function renderAnkiConfigStatus(message = "") {
     const config = state.ankiConfig;
     elements.ankiConfigStatus.textContent = message || (config
-        ? `Deck ${config.deckName} · mature em ${config.matureThresholdDays} dias · limite ${config.dailyReviewLimit}/dia.`
+        ? `Deck ${config.deckName} - mature em ${config.matureThresholdDays} dias - limite ${config.dailyReviewLimit}/dia.`
         : "Configuracao do Anki indisponivel.");
 }
 
@@ -660,6 +734,9 @@ async function loadCards() {
         }
 
         state.cards = await response.json();
+        const currentIds = new Set(state.cards.map((card) => card.id));
+        state.selectedCardIds = new Set(Array.from(state.selectedCardIds).filter((id) => currentIds.has(id)));
+        updateBulkDeleteControls();
         setBoardStatus("");
         renderBoard();
     } catch (error) {
@@ -667,6 +744,219 @@ async function loadCards() {
         setBoardStatus(`Nao foi possivel carregar seus estudos. ${error.message}`);
         renderBoard();
     }
+}
+
+function openImportJsonModal() {
+    elements.importJsonFeedback.textContent = "";
+    if (!elements.importJsonInput.value.trim()) {
+        fillImportJsonExample();
+    }
+    elements.importJsonBackdrop.hidden = false;
+    elements.importJsonInput.focus();
+}
+
+function closeImportJsonModal() {
+    elements.importJsonBackdrop.hidden = true;
+    elements.importJsonFeedback.textContent = "";
+    elements.importJsonFileInput.value = "";
+}
+
+function fillImportJsonExample() {
+    elements.importJsonInput.value = JSON.stringify([
+        {
+            titulo: "Retry + Idempotencia",
+            contexto: "Padroes de resiliencia",
+            descricao: "Estudar como evitar efeitos duplicados quando uma operacao e executada mais de uma vez.",
+            prioridade: "ALTA",
+            estagio: "TRIAGEM",
+            orderIndex: 0,
+            tags: [
+                { categoria: "TIPO", valor: "Backend" },
+                { categoria: "LINGUAGEM", valor: "Kotlin" }
+            ],
+            recursos: [
+                {
+                    tipo: "DOCUMENTACAO",
+                    titulo: "Spring Retry",
+                    url: "https://docs.spring.io/spring-retry/docs/current/reference/html/",
+                    observacoes: "Referencia para comparar retries com idempotencia."
+                },
+                {
+                    tipo: "TAREFA",
+                    titulo: "Criar endpoint POST /payments idempotente",
+                    observacoes: "Usar header Idempotency-Key e constraint unica."
+                }
+            ]
+        }
+    ], null, 2);
+}
+
+async function loadImportJsonFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith(".json")) {
+        elements.importJsonFeedback.textContent = "Selecione um arquivo .json.";
+        event.target.value = "";
+        return;
+    }
+
+    try {
+        elements.importJsonInput.value = await file.text();
+        elements.importJsonFeedback.textContent = `Arquivo ${file.name} carregado para revisao.`;
+    } catch (error) {
+        elements.importJsonFeedback.textContent = `Nao foi possivel ler o arquivo. ${error.message}`;
+    }
+}
+
+async function importCardsFromJson(event) {
+    event.preventDefault();
+    elements.importJsonFeedback.textContent = "";
+
+    let payload;
+    try {
+        payload = buildImportPayload(elements.importJsonInput.value);
+    } catch (error) {
+        elements.importJsonFeedback.textContent = error.message;
+        return;
+    }
+
+    elements.submitImportJsonButton.disabled = true;
+    elements.importJsonFeedback.textContent = "Importando cards...";
+
+    try {
+        const response = await fetch(API.cardImport, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(body.message || "Revise o JSON e tente novamente.");
+        }
+
+        const errorSummary = body.errorCount > 0
+            ? ` ${body.errorCount} erro(s): ${formatImportErrors(body.errors)}`
+            : "";
+        const resourceSummary = body.resourcesCreatedCount ? ` ${body.resourcesCreatedCount} recurso(s) criado(s).` : "";
+        elements.importJsonFeedback.textContent = `${body.createdCount} de ${body.requestedCount} card(s) importado(s).${resourceSummary}${errorSummary}`;
+
+        if (body.createdCount > 0) {
+            await loadCards();
+        }
+    } catch (error) {
+        elements.importJsonFeedback.textContent = `Nao foi possivel importar. ${error.message}`;
+    } finally {
+        elements.submitImportJsonButton.disabled = false;
+    }
+}
+
+function buildImportPayload(rawJson) {
+    const trimmed = rawJson.trim();
+    if (!trimmed) {
+        throw new Error("Cole o JSON com os cards para importar.");
+    }
+
+    const parsed = JSON.parse(trimmed);
+    const cards = Array.isArray(parsed) ? parsed : parsed.cards;
+
+    if (!Array.isArray(cards)) {
+        throw new Error('Use um array de cards ou um objeto no formato { "cards": [...] }.');
+    }
+
+    if (cards.length === 0) {
+        throw new Error("Inclua pelo menos um card no JSON.");
+    }
+
+    return { cards };
+}
+
+function formatImportErrors(errors = []) {
+    return errors
+        .slice(0, 3)
+        .map((error) => `card ${error.index + 1} (${error.field}: ${error.message})`)
+        .join("; ");
+}
+
+function openTagsModal() {
+    elements.tagsFilterInput.value = "";
+    renderTagsModal();
+    elements.tagsBackdrop.hidden = false;
+    elements.tagsFilterInput.focus();
+}
+
+function closeTagsModal() {
+    elements.tagsBackdrop.hidden = true;
+}
+
+function renderTagsModal() {
+    const tags = getDistinctTags();
+    const filter = elements.tagsFilterInput.value.trim().toLowerCase();
+    const filteredTags = tags.filter((tag) =>
+        [tag.categoria, tag.valor, tag.cards.map((card) => card.titulo).join(" ")]
+            .join(" ")
+            .toLowerCase()
+            .includes(filter)
+    );
+
+    elements.tagsSummary.textContent = `${tags.length} tag(s) unica(s), ${state.cards.length} card(s) no sistema.`;
+    if (filteredTags.length === 0) {
+        elements.tagsList.innerHTML = `<div class="empty-stage">Nenhuma tag encontrada.</div>`;
+        return;
+    }
+
+    elements.tagsList.innerHTML = filteredTags.map((tag) => `
+        <article class="tag-row">
+            <div>
+                <span class="artifact-type">${tagCategoryLabel(tag.categoria)}</span>
+                <h3>${escapeHtml(tag.valor)}</h3>
+                <p>${tag.cards.map((card) => escapeHtml(card.titulo)).join(", ")}</p>
+            </div>
+            <span class="tag-count">${tag.cards.length}</span>
+        </article>
+    `).join("");
+}
+
+function getDistinctTags() {
+    const tagsByKey = new Map();
+
+    state.cards.forEach((card) => {
+        (card.tags || []).forEach((tag) => {
+            const value = normalizeWhitespace(tag.valor || "");
+            if (!value) {
+                return;
+            }
+
+            const key = `${tag.categoria}:${value.toLowerCase()}`;
+            const existing = tagsByKey.get(key) || {
+                categoria: tag.categoria,
+                valor: value,
+                cards: []
+            };
+
+            if (!existing.cards.some((item) => item.id === card.id)) {
+                existing.cards.push(card);
+            }
+
+            tagsByKey.set(key, existing);
+        });
+    });
+
+    return Array.from(tagsByKey.values())
+        .sort((first, second) =>
+            first.categoria.localeCompare(second.categoria, "pt-BR") ||
+            first.valor.localeCompare(second.valor, "pt-BR")
+        );
+}
+
+function tagCategoryLabel(category) {
+    const labels = {
+        LINGUAGEM: "Linguagem",
+        TIPO: "Tipo"
+    };
+    return labels[category] || category;
 }
 
 async function saveCard(event) {
@@ -725,10 +1015,10 @@ function buildPayload() {
         descricao: emptyToNull(elements.descriptionInput.value),
         estagio: editingCard?.estagio || state.creatingStage,
         orderIndex: editingCard?.orderIndex || 0,
-        tags: [
+        tags: distinctTags([
             ...parseTags(elements.languagesInput.value, "LINGUAGEM"),
             ...parseTags(elements.typesInput.value, "TIPO")
-        ]
+        ])
     };
 }
 
@@ -778,6 +1068,18 @@ function parseTags(value, categoria) {
         .map((valor) => ({ categoria, valor }));
 }
 
+function distinctTags(tags = []) {
+    const seen = new Set();
+    return tags.filter((tag) => {
+        const key = `${tag.categoria}:${tag.valor.trim().toLowerCase()}`;
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+}
+
 function emptyToNull(value) {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
@@ -792,6 +1094,7 @@ function renderBoard() {
     elements.totalCards.textContent = state.cards.length;
     elements.highPriorityCards.textContent = state.cards.filter((card) => card.prioridade === "ALTA").length;
     elements.visibleCardsLabel.textContent = visibleCards.length;
+    renderNextAction(visibleCards);
     renderStudyTimeline(visibleCards);
     elements.clearStageFilterButton.hidden = !state.filters.stage;
     elements.clearStageFilterButton.textContent = state.filters.stage
@@ -810,6 +1113,7 @@ function renderBoard() {
 function renderGroups(container, cardsByGroup, groupKind) {
     container.innerHTML = "";
     const groups = Object.entries(cardsByGroup).sort(([first], [second]) => first.localeCompare(second, "pt-BR"));
+    const canCollapseGroups = groups.length > 1;
     if (groups.length === 0) {
         container.innerHTML = `<div class="empty-board">${groupKind === "consolidated" ? "Nenhum card consolidado neste filtro." : "Nenhum card encontrado com estes filtros."}</div>`;
         return;
@@ -823,22 +1127,30 @@ function renderGroups(container, cardsByGroup, groupKind) {
         const group = document.createElement("section");
         group.className = "study-group";
         group.dataset.studyType = groupName;
+        const collapsed = canCollapseGroups && state.collapsedGroups.has(groupKey);
+        group.classList.toggle("is-collapsed", collapsed);
         group.innerHTML = `
             <header class="study-group-header">
-                <div>
-                    <p class="group-kicker">Gatilho / assunto</p>
+                <button class="group-collapse-button" type="button" data-group-key="${escapeHtml(groupKey)}" aria-expanded="${!collapsed}" ${canCollapseGroups ? "" : "disabled"}>
+                    <span class="group-collapse-icon" aria-hidden="true"></span>
+                </button>
+                <div class="group-title">
+                    <p class="group-kicker">Contexto de estudo</p>
                     <h3>${escapeHtml(groupName)}</h3>
                 </div>
                 <div class="group-actions">
+                    ${groupKind === "active" ? `<span class="group-order-label">Ordem manual</span>` : ""}
                     <span class="group-count">${orderedCards.length}</span>
                     ${groupKind === "active" ? `<button class="group-add-button" type="button" data-study-type="${escapeHtml(groupName)}" aria-label="Adicionar card em ${escapeHtml(groupName)}" title="Adicionar card">+</button>` : ""}
                 </div>
             </header>
-            <div class="study-row"></div>
-            ${hiddenCount > 0 ? `<button class="show-more-button" type="button" data-group-key="${escapeHtml(groupKey)}">Ver mais ${hiddenCount} cards</button>` : ""}
+            <div class="study-row" ${collapsed ? "hidden" : ""}></div>
+            ${hiddenCount > 0 && !collapsed ? `<button class="show-more-button" type="button" data-group-key="${escapeHtml(groupKey)}">Ver mais ${hiddenCount} cards</button>` : ""}
         `;
         const row = group.querySelector(".study-row");
-        visibleCards.forEach((card) => row.appendChild(renderCard(card)));
+        if (!collapsed) {
+            visibleCards.forEach((card) => row.appendChild(renderCard(card)));
+        }
         container.appendChild(group);
     });
 }
@@ -856,12 +1168,26 @@ function renderCard(card) {
         ? renderCardDescription(card.descricao)
         : "";
     const progress = cardProgress(normalizeStage(card.estagio));
+    const order = getCardOrderInfo(card);
+    const orderBadge = order
+        ? `<span class="card-order-badge" title="Posicao ${order.position} de ${order.total} neste contexto">#${order.position}</span>`
+        : "";
+    const selected = state.selectedCardIds.has(card.id);
+    article.classList.toggle("is-selected", selected);
+    const selectionControl = state.bulkDeleteMode
+        ? `<label class="card-select-control" aria-label="Selecionar ${escapeHtml(card.titulo)}">
+            <input class="card-select-input" type="checkbox" data-card-id="${card.id}" ${selected ? "checked" : ""}>
+            <span></span>
+        </label>`
+        : "";
 
     article.innerHTML = `
+        ${selectionControl}
         <div class="card-topline">
             <span class="priority-dot" aria-hidden="true"></span>
             <span class="card-context">${escapeHtml(card.contexto)}</span>
-            <span class="card-stage">${stageLabel(card.estagio)} · ${progress.index + 1}/6</span>
+            <span class="card-stage">${stageLabel(card.estagio)} - ${progress.index + 1}/6</span>
+            ${orderBadge}
         </div>
         <h3 class="card-title">${escapeHtml(card.titulo)}</h3>
         ${description}
@@ -878,7 +1204,6 @@ function renderCard(card) {
         </div>
         <div class="card-actions">
             ${renderOrderControls(card)}
-            <button class="card-detail-button" type="button">Abrir</button>
             ${nextStageButton(card)}
         </div>
     `;
@@ -887,6 +1212,24 @@ function renderCard(card) {
 }
 
 function handleBoardClick(event) {
+    const selectInput = event.target.closest(".card-select-input");
+    if (selectInput) {
+        const cardId = Number(selectInput.dataset.cardId);
+        if (selectInput.checked) {
+            state.selectedCardIds.add(cardId);
+        } else {
+            state.selectedCardIds.delete(cardId);
+        }
+        updateBulkDeleteControls();
+        renderBoard();
+        return;
+    }
+
+    const selectControl = event.target.closest(".card-select-control");
+    if (selectControl) {
+        return;
+    }
+
     const timelineStep = event.target.closest(".timeline-step");
     if (timelineStep) {
         const stage = timelineStep.dataset.stage;
@@ -898,6 +1241,18 @@ function handleBoardClick(event) {
     const showMoreButton = event.target.closest(".show-more-button");
     if (showMoreButton) {
         state.expandedGroups.add(showMoreButton.dataset.groupKey);
+        renderBoard();
+        return;
+    }
+
+    const groupCollapseButton = event.target.closest(".group-collapse-button");
+    if (groupCollapseButton && !groupCollapseButton.disabled) {
+        const groupKey = groupCollapseButton.dataset.groupKey;
+        if (state.collapsedGroups.has(groupKey)) {
+            state.collapsedGroups.delete(groupKey);
+        } else {
+            state.collapsedGroups.add(groupKey);
+        }
         renderBoard();
         return;
     }
@@ -943,6 +1298,16 @@ function handleBoardClick(event) {
     if (cardElement) {
         const card = state.cards.find((item) => item.id === Number(cardElement.dataset.cardId));
         if (card) {
+            if (state.bulkDeleteMode) {
+                if (state.selectedCardIds.has(card.id)) {
+                    state.selectedCardIds.delete(card.id);
+                } else {
+                    state.selectedCardIds.add(card.id);
+                }
+                updateBulkDeleteControls();
+                renderBoard();
+                return;
+            }
             openCardDetail(card);
         }
         return;
@@ -1056,7 +1421,7 @@ async function openMoveModal(card, targetStage) {
     elements.moveFormFeedback.textContent = "";
     elements.moveEvidenceWarning.hidden = true;
 
-    if (isEvidenceStage(card.estagio) && targetStage === "CONSOLIDACAO") {
+    if (["REFINAMENTO", "CONSOLIDACAO"].includes(targetStage)) {
         const evidence = await fetchEvidence(card.id);
         elements.moveEvidenceWarning.hidden = evidence.length > 0;
     }
@@ -1085,8 +1450,86 @@ async function openCardDetail(card) {
     renderObsidianPanel();
     renderMvp2Panels();
     renderDetailProgress(card);
+    renderDetailFocus(card);
     elements.detailModalBackdrop.hidden = false;
     await loadCardArtifacts(card.id);
+}
+
+function renderDetailFocus(card) {
+    if (!card) {
+        return;
+    }
+    const stage = normalizeStage(card.estagio);
+    const guidance = STAGE_GUIDANCE[stage];
+    const nextStage = STAGES[STAGES.findIndex((item) => item.key === stage) + 1];
+    const resourceCount = state.resources.length;
+    const evidenceCount = state.evidence.length;
+    const ankiCount = state.ankiNotes.length;
+
+    elements.detailCurrentKicker.textContent = `Etapa atual: ${stageLabel(stage)}`;
+    elements.detailCurrentTitle.textContent = guidance.title;
+    elements.detailCurrentDescription.textContent = guidance.description;
+    elements.detailCurrentStatus.textContent = stage === "ABSORVIDO" ? "Concluido" : "Em andamento";
+    elements.detailCurrentChecklist.innerHTML = guidance.checklist.map((item) => `<div class="current-check-item"><span aria-hidden="true">-</span>${escapeHtml(item)}</div>`).join("");
+    elements.advanceCardButton.textContent = nextStage ? guidance.next : "Consolidado";
+    elements.advanceCardButton.disabled = !nextStage;
+
+    document.querySelectorAll("[data-detail-stages]").forEach((panel) => {
+        panel.hidden = !panel.dataset.detailStages.split(" ").includes(stage);
+    });
+
+    if (stage === "TRIAGEM" || stage === "ESTUDO_ATIVO") {
+        elements.detailCurrentStatus.textContent = resourceCount ? `${resourceCount} material(is)` : "Sem materiais";
+    } else if (stage === "APLICACAO" || stage === "REFINAMENTO") {
+        elements.detailCurrentStatus.textContent = evidenceCount ? `${evidenceCount} evidencia(s)` : "Evidencia pendente";
+    } else if (stage === "CONSOLIDACAO") {
+        elements.detailCurrentStatus.textContent = ankiCount ? `${ankiCount} flashcard(s)` : "Flashcard pendente";
+    }
+}
+
+function advanceActiveCard() {
+    if (!state.activeCard) {
+        return;
+    }
+    const stageIndex = STAGES.findIndex((stage) => stage.key === normalizeStage(state.activeCard.estagio));
+    const nextStage = STAGES[stageIndex + 1];
+    if (nextStage) {
+        openMoveModal(state.activeCard, nextStage.key);
+    }
+}
+
+function renderNextAction(cards) {
+    const candidates = cards.filter((card) => normalizeStage(card.estagio) !== "ABSORVIDO");
+    const dueReview = candidates.find((card) => normalizeStage(card.estagio) === "CONSOLIDACAO" && card.nextReviewAt && card.nextReviewAt <= new Date().toISOString().slice(0, 10));
+    const nextCard = dueReview || candidates.sort(sortStudyPlanCards)[0];
+
+    if (!nextCard) {
+        elements.nextActionTitle.textContent = "Nenhum estudo pendente";
+        elements.nextActionDescription.textContent = "Crie um card quando surgir o proximo assunto que voce quer aprender.";
+        elements.nextActionButton.textContent = "Novo estudo";
+        elements.nextActionButton.disabled = false;
+        elements.nextActionButton.dataset.cardId = "";
+        return;
+    }
+
+    const stage = normalizeStage(nextCard.estagio);
+    elements.nextActionTitle.textContent = nextCard.titulo;
+    elements.nextActionDescription.textContent = `${stageLabel(stage)}: ${STAGE_GUIDANCE[stage].description}`;
+    elements.nextActionButton.textContent = dueReview ? "Revisar agora" : "Continuar";
+    elements.nextActionButton.disabled = false;
+    elements.nextActionButton.dataset.cardId = String(nextCard.id);
+}
+
+function openNextActionCard() {
+    const cardId = Number(elements.nextActionButton.dataset.cardId);
+    if (!cardId) {
+        openModal();
+        return;
+    }
+    const card = state.cards.find((item) => item.id === cardId);
+    if (card) {
+        openCardDetail(card);
+    }
 }
 
 function closeDetailModal() {
@@ -1235,6 +1678,60 @@ async function deleteActiveCard() {
     setBoardStatus(`"${card.titulo}" apagado.`);
 }
 
+function toggleBulkDeleteMode() {
+    state.bulkDeleteMode = !state.bulkDeleteMode;
+    state.selectedCardIds.clear();
+    updateBulkDeleteControls();
+    renderBoard();
+}
+
+function updateBulkDeleteControls() {
+    const count = state.selectedCardIds.size;
+    elements.deleteSelectedCardsButton.hidden = !state.bulkDeleteMode;
+    elements.deleteSelectedCardsButton.disabled = count === 0;
+    elements.deleteSelectedCardsButton.dataset.tooltip = count > 0 ? `Apagar ${count}` : "Apagar selecionados";
+    elements.toggleBulkDeleteButton.classList.toggle("is-active", state.bulkDeleteMode);
+    elements.toggleBulkDeleteButton.dataset.tooltip = state.bulkDeleteMode ? "Cancelar selecao" : "Selecionar";
+}
+
+async function deleteSelectedCards() {
+    const ids = Array.from(state.selectedCardIds);
+    if (ids.length === 0) {
+        return;
+    }
+
+    const confirmed = confirm(`Apagar ${ids.length} card(s) selecionado(s) e todos os dados vinculados?`);
+    if (!confirmed) {
+        return;
+    }
+
+    setBoardStatus("Apagando cards selecionados...");
+    elements.deleteSelectedCardsButton.disabled = true;
+
+    try {
+        const response = await fetch(API.cardDeleteBatch, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ ids })
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(body.message || "Nao foi possivel apagar os cards.");
+        }
+
+        const deletedIds = new Set(ids.filter((id) => !(body.notFoundIds || []).includes(id)));
+        state.cards = state.cards.filter((card) => !deletedIds.has(card.id));
+        state.selectedCardIds.clear();
+        state.bulkDeleteMode = false;
+        updateBulkDeleteControls();
+        renderBoard();
+        setBoardStatus(`${body.deletedCount} card(s) apagado(s).`);
+    } catch (error) {
+        setBoardStatus(error.message);
+        updateBulkDeleteControls();
+    }
+}
+
 async function loadCardArtifacts(cardId) {
     elements.resourcesList.innerHTML = `<div class="empty-stage">Carregando recursos...</div>`;
     elements.qualityChecklist.innerHTML = `<div class="empty-stage">Carregando checklist...</div>`;
@@ -1263,6 +1760,7 @@ async function loadCardArtifacts(cardId) {
         renderChecklist();
         renderAnkiNotes();
         renderMvp2Panels();
+        renderDetailFocus(state.activeCard);
     } catch (error) {
         elements.detailFormFeedback.textContent = `Nao foi possivel carregar o detalhe. ${error.message}`;
     }
@@ -1314,7 +1812,7 @@ function renderMvp2Panels() {
     elements.manualFlashcardsBadge.textContent = card.manualFlashcardsCount ? `${card.manualFlashcardsCount} cards` : "Manual";
     elements.manualFlashcardsStatus.textContent = card.manualFlashcardsCount
         ? `Flashcards criados em ${formatDate(card.manualFlashcardsCreatedAt)}.`
-        : "Registre a criacao manual para mover o card para consolidacao.";
+        : "Use este registro apenas se voce criou flashcards fora do AnkiConnect.";
     elements.ankiFrontInput.value = card.titulo || "";
     elements.ankiBackInput.value = card.descricao || card.contexto || "";
     renderReviewStatus(card);
@@ -1357,25 +1855,27 @@ function renderChecklist() {
 }
 
 function renderAnkiNotes(message = "") {
+    const config = state.ankiConfig;
+    const connection = config ? `Deck: ${config.deckName}. ` : "Configure o AnkiConnect para salvar no Anki. ";
     elements.ankiCardStatus.textContent = message || (state.ankiNotes.length > 0
-        ? `${state.ankiNotes.length} nota(s) vinculada(s).`
-        : "Nenhuma nota criada pelo Study Flow ainda.");
-    elements.ankiCardBadge.textContent = state.ankiNotes.some((note) => note.mature) ? "Mature" : "Local";
+        ? `${connection}${state.ankiNotes.length} flashcard(s) enviado(s). Atualize o status para consultar a revisao.`
+        : `${connection}Preencha pergunta e resposta para criar o primeiro flashcard.`);
+    elements.ankiCardBadge.textContent = state.ankiNotes.some((note) => note.mature) ? "Maduro" : (state.ankiNotes.length ? "Enviado" : "Pendente");
     if (state.ankiNotes.length === 0) {
-        elements.ankiNotesList.innerHTML = `<div class="empty-stage">Nenhuma nota Anki vinculada</div>`;
+        elements.ankiNotesList.innerHTML = `<div class="empty-stage">Nenhum flashcard enviado ainda.</div>`;
         return;
     }
     elements.ankiNotesList.innerHTML = state.ankiNotes.map((note) => `
         <article class="artifact-item">
             <div class="artifact-card-main">
                 <div>
-                    <span class="artifact-type">Nota ${note.noteId}</span>
+                    <span class="artifact-type">Flashcard ${note.noteId}</span>
                     <h4>${escapeHtml(note.front)}</h4>
                 </div>
-                <span class="mature-badge ${note.mature ? "is-mature" : ""}">${note.mature ? "Mature" : "Aprendendo"}</span>
+                <span class="mature-badge ${note.mature ? "is-mature" : ""}">${note.mature ? "Maduro" : "Em aprendizado"}</span>
             </div>
             <p>${formatTextWithLinks(note.back)}</p>
-            <p class="muted-line">Intervalo conhecido: ${note.lastKnownIntervalDays ?? "sem sync"} dias</p>
+            <p class="muted-line">Intervalo conhecido: ${note.lastKnownIntervalDays ?? "atualize o status"} dias</p>
         </article>
     `).join("");
 }
@@ -1434,7 +1934,7 @@ async function createAnkiNote(event) {
     if (!state.activeCard) {
         return;
     }
-    renderAnkiNotes("Criando nota no Anki...");
+    renderAnkiNotes("Salvando flashcard no Anki...");
     try {
         const response = await fetch(API.ankiNotes(state.activeCard.id), {
             method: "POST",
@@ -1449,7 +1949,8 @@ async function createAnkiNote(event) {
         }
         const note = await response.json();
         state.ankiNotes = [note, ...state.ankiNotes];
-        renderAnkiNotes("Nota criada no Anki.");
+        renderAnkiNotes("Flashcard salvo no Anki.");
+        renderDetailFocus(state.activeCard);
     } catch (error) {
         renderAnkiNotes(`Erro ao criar nota. ${error.message}`);
     }
@@ -1459,7 +1960,7 @@ async function syncAnkiMature() {
     if (!state.activeCard) {
         return;
     }
-    renderAnkiNotes("Sincronizando mature...");
+    renderAnkiNotes("Atualizando status no Anki...");
     try {
         const response = await fetch(API.ankiMature(state.activeCard.id), {
             method: "POST",
@@ -1469,7 +1970,8 @@ async function syncAnkiMature() {
             throw new Error("Abra o Anki e tente sincronizar novamente.");
         }
         state.ankiNotes = await response.json();
-        renderAnkiNotes("Mature sincronizado.");
+        renderAnkiNotes("Status de revisao atualizado.");
+        renderDetailFocus(state.activeCard);
         await loadCards();
     } catch (error) {
         renderAnkiNotes(`Nao foi possivel sincronizar. ${error.message}`);
@@ -1534,6 +2036,7 @@ async function saveResource(event) {
 
     state.resources = await fetchResources(state.activeCard.id);
     renderResources();
+    renderDetailFocus(state.activeCard);
     resetResourceForm();
 }
 
@@ -1569,6 +2072,7 @@ async function saveEvidence(event) {
 
     state.evidence = await fetchEvidence(state.activeCard.id);
     renderEvidence();
+    renderDetailFocus(state.activeCard);
     resetEvidenceForm();
 }
 
@@ -1862,9 +2366,9 @@ function getVisibleCards() {
 
 function groupCardsByType(cards) {
     return cards.reduce((accumulator, card) => {
-        const type = card.tags?.find((tag) => tag.categoria === "TIPO")?.valor || card.contexto || "Sem tipo";
-        accumulator[type] = accumulator[type] || [];
-        accumulator[type].push(card);
+        const context = card.contexto || "Sem contexto";
+        accumulator[context] = accumulator[context] || [];
+        accumulator[context].push(card);
         return accumulator;
     }, {});
 }
@@ -1897,27 +2401,21 @@ function renderOrderControls(card) {
         return "";
     }
 
-    const groupCards = groupCardsByType(state.cards.filter((item) =>
-        normalizeStage(item.estagio) === normalizeStage(card.estagio) &&
-        normalizeStage(item.estagio) !== "ABSORVIDO"
-    ));
-    const groupName = card.tags?.find((tag) => tag.categoria === "TIPO")?.valor || card.contexto || "Sem tipo";
-    const siblings = (groupCards[groupName] || []).sort(sortCards);
-    const index = siblings.findIndex((item) => item.id === card.id);
+    const order = getCardOrderInfo(card);
+    if (!order || order.total <= 1) {
+        return "";
+    }
 
-    return `<div class="card-order-controls" aria-label="Ordenar card">
-        <button class="card-order-button" type="button" data-direction="up" aria-label="Mover card para cima" ${index <= 0 ? "disabled" : ""}>&#8593;</button>
-        <button class="card-order-button" type="button" data-direction="down" aria-label="Mover card para baixo" ${index < 0 || index === siblings.length - 1 ? "disabled" : ""}>&#8595;</button>
+    const isSaving = state.reorderingCardId === card.id;
+    return `<div class="card-order-controls ${isSaving ? "is-saving" : ""}" aria-label="Ordenar card">
+        <button class="card-order-button" type="button" data-direction="up" aria-label="Mover para posicao anterior" data-tooltip="Subir" ${order.index <= 0 || isSaving ? "disabled" : ""}>&uarr;</button>
+        <span class="card-order-position" aria-label="Posicao ${order.position} de ${order.total}">${order.position}/${order.total}</span>
+        <button class="card-order-button" type="button" data-direction="down" aria-label="Mover para proxima posicao" data-tooltip="Descer" ${order.index === order.total - 1 || isSaving ? "disabled" : ""}>&darr;</button>
     </div>`;
 }
 
 async function reorderCard(card, direction) {
-    const groupName = card.tags?.find((tag) => tag.categoria === "TIPO")?.valor || card.contexto || "Sem tipo";
-    const stage = normalizeStage(card.estagio);
-    const siblings = (groupCardsByType(state.cards.filter((item) =>
-        normalizeStage(item.estagio) === stage &&
-        (item.tags?.find((tag) => tag.categoria === "TIPO")?.valor || item.contexto || "Sem tipo") === groupName
-    ))[groupName] || []).sort(sortCards);
+    const siblings = getOrderedSiblings(card);
     const currentIndex = siblings.findIndex((item) => item.id === card.id);
     const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
 
@@ -1926,7 +2424,13 @@ async function reorderCard(card, direction) {
     }
 
     [siblings[currentIndex], siblings[targetIndex]] = [siblings[targetIndex], siblings[currentIndex]];
+    const previousOrders = siblings.map((item) => ({ id: item.id, orderIndex: item.orderIndex }));
+    siblings.forEach((item, index) => {
+        item.orderIndex = index;
+    });
+    state.reorderingCardId = card.id;
     setBoardStatus("Salvando nova ordem...");
+    renderBoard();
 
     try {
         const savedCards = await Promise.all(siblings.map(async (item, index) => {
@@ -1943,10 +2447,46 @@ async function reorderCard(card, direction) {
 
         state.cards = state.cards.map((item) => savedCards.find((saved) => saved.id === item.id) || item);
         setBoardStatus("Ordem atualizada.");
-        renderBoard();
     } catch (error) {
+        previousOrders.forEach((previous) => {
+            const item = state.cards.find((cardItem) => cardItem.id === previous.id);
+            if (item) {
+                item.orderIndex = previous.orderIndex;
+            }
+        });
         setBoardStatus(error.message);
+    } finally {
+        state.reorderingCardId = null;
+        renderBoard();
     }
+}
+
+function getCardOrderInfo(card) {
+    const siblings = getOrderedSiblings(card);
+    const index = siblings.findIndex((item) => item.id === card.id);
+
+    if (index < 0 || siblings.length <= 1 || normalizeStage(card.estagio) === "ABSORVIDO") {
+        return null;
+    }
+
+    return {
+        index,
+        position: index + 1,
+        total: siblings.length
+    };
+}
+
+function getOrderedSiblings(card) {
+    const groupName = card.contexto || "Sem contexto";
+    const stage = normalizeStage(card.estagio);
+
+    return state.cards
+        .filter((item) =>
+            normalizeStage(item.estagio) === stage &&
+            normalizeStage(item.estagio) !== "ABSORVIDO" &&
+            (item.contexto || "Sem contexto") === groupName
+        )
+        .sort(sortCards);
 }
 
 function cardPayload(card, orderIndex) {
@@ -1968,7 +2508,7 @@ function nextStageButton(card) {
         return "";
     }
 
-    return `<button class="card-next-button" type="button" data-next-stage="${nextStage.key}">Avancar</button>`;
+    return `<button class="card-next-button" type="button" data-next-stage="${nextStage.key}">${STAGE_GUIDANCE[normalizeStage(card.estagio)].next}</button>`;
 }
 
 function sortCards(first, second) {
@@ -2055,7 +2595,7 @@ function setBoardStatus(message) {
     elements.boardStatus.textContent = message;
 }
 
-function openModal(targetStage = "TRIAGEM", suggestedType = "") {
+function openModal(targetStage = "TRIAGEM", suggestedContext = "") {
     const normalizedStage = normalizeStage(targetStage);
     state.editingCardId = null;
     state.creatingStage = normalizedStage;
@@ -2064,8 +2604,8 @@ function openModal(targetStage = "TRIAGEM", suggestedType = "") {
     elements.saveCardButton.textContent = "Criar card";
     elements.createCardForm.reset();
     elements.priorityInput.value = "MEDIA";
-    elements.contextInput.value = "Geral";
-    elements.typesInput.value = suggestedType;
+    elements.contextInput.value = suggestedContext || "Geral";
+    elements.typesInput.value = "";
     clearFormErrors();
     elements.modalBackdrop.hidden = false;
     elements.titleInput.focus();
