@@ -43,9 +43,31 @@ Na primeira execucao o SQLite cria o arquivo `flow-study.db` automaticamente e o
 
 Quando nenhum banco e configurado por variavel de ambiente, a aplicacao usa `%APPDATA%\StudyFlow\flow-study.db` no Windows.
 
-## Gerar executavel Windows
+## Gerar ZIP entregavel para Windows
 
 Com JDK 21 instalado:
+
+```powershell
+.\gradlew.bat packageZip
+```
+
+O ZIP fica em:
+
+```text
+build\release\StudyFlow-windows.zip
+```
+
+Esse arquivo e o entregavel recomendado para publicar em uma Release do GitHub.
+Quem baixar deve extrair o ZIP e abrir:
+
+```text
+StudyFlow\StudyFlow.exe
+```
+
+Ao abrir esse `.exe`, o servidor local inicia e o navegador abre em `http://localhost:8732`.
+O pacote ja inclui uma runtime Java, entao nao precisa instalar Java no computador que vai executar.
+
+Se quiser gerar apenas a pasta com o executavel, sem compactar:
 
 ```powershell
 .\gradlew.bat packageExe
@@ -56,8 +78,6 @@ O executavel fica em:
 ```text
 build\exe\StudyFlow\StudyFlow.exe
 ```
-
-Ao abrir esse `.exe`, o servidor local inicia e o navegador abre em `http://localhost:8732`.
 
 ## Rodar com poucos cliques no Windows
 
