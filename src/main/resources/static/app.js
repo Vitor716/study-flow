@@ -3,6 +3,14 @@ const API = {
     obsidianConfig: "/api/obsidian/config",
     ankiConfig: "/api/anki/config",
     ankiStatus: "/api/anki/status",
+    backupConfig: "/api/backup/config",
+    exportJson: "/api/backup/export-json",
+    exportMarkdown: "/api/backup/export-markdown",
+    backupSqlite: "/api/backup/sqlite",
+    commitExports: "/api/backup/commit",
+    pushBackup: "/api/backup/push",
+    importPreview: "/api/backup/import/preview",
+    importSnapshot: "/api/backup/import",
     obsidianNote: (cardId) => `/api/cards/${cardId}/obsidian-note`,
     openObsidian: (cardId) => `/api/cards/${cardId}/open-obsidian`,
     stageHistory: "/api/stage-history",
@@ -43,6 +51,7 @@ const state = {
     evidence: [],
     obsidianConfig: null,
     ankiConfig: null,
+    backupConfig: null,
     checklist: null,
     ankiNotes: [],
     filters: {
@@ -68,6 +77,22 @@ const elements = {
     refreshButton: document.querySelector("#refreshButton"),
     openCreateModalButton: document.querySelector("#openCreateModalButton"),
     openAnkiConfigButton: document.querySelector("#openAnkiConfigButton"),
+    openBackupConfigButton: document.querySelector("#openBackupConfigButton"),
+    backupConfigBackdrop: document.querySelector("#backupConfigBackdrop"),
+    closeBackupConfigButton: document.querySelector("#closeBackupConfigButton"),
+    cancelBackupConfigButton: document.querySelector("#cancelBackupConfigButton"),
+    backupConfigForm: document.querySelector("#backupConfigForm"),
+    backupConfigStatus: document.querySelector("#backupConfigStatus"),
+    backupRemoteInput: document.querySelector("#backupRemoteInput"),
+    backupTokenInput: document.querySelector("#backupTokenInput"),
+    backupConfigFeedback: document.querySelector("#backupConfigFeedback"),
+    exportJsonButton: document.querySelector("#exportJsonButton"),
+    exportMarkdownButton: document.querySelector("#exportMarkdownButton"),
+    backupSqliteButton: document.querySelector("#backupSqliteButton"),
+    commitExportsButton: document.querySelector("#commitExportsButton"),
+    pushBackupButton: document.querySelector("#pushBackupButton"),
+    previewImportButton: document.querySelector("#previewImportButton"),
+    importSnapshotButton: document.querySelector("#importSnapshotButton"),
     ankiConfigBackdrop: document.querySelector("#ankiConfigBackdrop"),
     closeAnkiConfigButton: document.querySelector("#closeAnkiConfigButton"),
     cancelAnkiConfigButton: document.querySelector("#cancelAnkiConfigButton"),
@@ -177,6 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderBoard();
     loadObsidianConfig();
     loadAnkiConfig();
+    loadBackupConfig();
     loadCards();
 });
 
@@ -184,6 +210,17 @@ function bindEvents() {
     elements.refreshButton.addEventListener("click", loadCards);
     elements.openCreateModalButton.addEventListener("click", () => openModal());
     elements.openAnkiConfigButton.addEventListener("click", openAnkiConfigModal);
+    elements.openBackupConfigButton.addEventListener("click", openBackupConfigModal);
+    elements.closeBackupConfigButton.addEventListener("click", closeBackupConfigModal);
+    elements.cancelBackupConfigButton.addEventListener("click", closeBackupConfigModal);
+    elements.backupConfigForm.addEventListener("submit", saveBackupConfig);
+    elements.exportJsonButton.addEventListener("click", () => runBackupAction(API.exportJson));
+    elements.exportMarkdownButton.addEventListener("click", () => runBackupAction(API.exportMarkdown));
+    elements.backupSqliteButton.addEventListener("click", () => runBackupAction(API.backupSqlite));
+    elements.commitExportsButton.addEventListener("click", () => runBackupAction(API.commitExports));
+    elements.pushBackupButton.addEventListener("click", () => runBackupAction(API.pushBackup));
+    elements.previewImportButton.addEventListener("click", previewImport);
+    elements.importSnapshotButton.addEventListener("click", importSnapshot);
     elements.closeAnkiConfigButton.addEventListener("click", closeAnkiConfigModal);
     elements.cancelAnkiConfigButton.addEventListener("click", closeAnkiConfigModal);
     elements.testAnkiConnectionButton.addEventListener("click", testAnkiConnection);
@@ -215,6 +252,11 @@ function bindEvents() {
     elements.obsidianConfigBackdrop.addEventListener("click", (event) => {
         if (event.target === elements.obsidianConfigBackdrop) {
             closeObsidianConfigModal();
+        }
+    });
+    elements.backupConfigBackdrop.addEventListener("click", (event) => {
+        if (event.target === elements.backupConfigBackdrop) {
+            closeBackupConfigModal();
         }
     });
 
@@ -279,6 +321,10 @@ function bindEvents() {
             closeAnkiConfigModal();
         }
 
+        if (!elements.backupConfigBackdrop.hidden) {
+            closeBackupConfigModal();
+        }
+
         if (!elements.moveModalBackdrop.hidden) {
             closeMoveModal();
         }
@@ -316,6 +362,142 @@ async function moveCard(card, targetStage, reason) {
     } catch (error) {
         setBoardStatus(`Nao foi possivel mover o card. ${error.message}`);
         throw error;
+    }
+}
+
+async function loadBackupConfig() {
+    try {
+        const response = await fetch(API.backupConfig, { headers: { Accept: "application/json" } });
+        if (!response.ok) {
+            throw new Error("Nao foi possivel carregar a configuracao de backup.");
+        }
+        state.backupConfig = await response.json();
+        renderBackupConfigStatus();
+    } catch (error) {
+        state.backupConfig = null;
+        elements.backupConfigStatus.textContent = error.message;
+    }
+}
+
+async function saveBackupConfig(event) {
+    event.preventDefault();
+    elements.backupConfigFeedback.textContent = "";
+
+    const payload = {
+        remoteUrl: elements.backupRemoteInput.value.trim(),
+        token: elements.backupTokenInput.value.trim()
+    };
+
+    try {
+        const response = await fetch(API.backupConfig, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error("Revise o remote e o token.");
+        }
+
+        state.backupConfig = await response.json();
+        elements.backupTokenInput.value = "";
+        renderBackupConfigStatus();
+        elements.backupConfigFeedback.textContent = "Configuracao de GitHub salva.";
+    } catch (error) {
+        elements.backupConfigFeedback.textContent = `Nao foi possivel salvar. ${error.message}`;
+    }
+}
+
+function openBackupConfigModal() {
+    const config = state.backupConfig || {};
+    elements.backupRemoteInput.value = config.remoteUrl || "";
+    elements.backupTokenInput.value = "";
+    elements.backupConfigFeedback.textContent = "";
+    renderBackupConfigStatus();
+    elements.backupConfigBackdrop.hidden = false;
+    elements.backupRemoteInput.focus();
+}
+
+function closeBackupConfigModal() {
+    elements.backupConfigBackdrop.hidden = true;
+    elements.backupConfigForm.reset();
+    elements.backupConfigFeedback.textContent = "";
+}
+
+function renderBackupConfigStatus() {
+    const config = state.backupConfig;
+    if (!config) {
+        elements.backupConfigStatus.textContent = "Configuracao de backup indisponivel.";
+        return;
+    }
+
+    const remoteStatus = config.remoteUrl ? "Remote configurado" : "Remote nao configurado";
+    const tokenStatus = config.tokenConfigured ? "token configurado" : "token ausente";
+    elements.backupConfigStatus.textContent = `${remoteStatus}; ${tokenStatus}. Push so roda pelo botao.`;
+}
+
+async function runBackupAction(url) {
+    elements.backupConfigFeedback.textContent = "Executando...";
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { Accept: "application/json" }
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(body.message || "Acao nao concluida.");
+        }
+
+        const pathInfo = body.path ? ` Caminho: ${body.path}.` : "";
+        const commitInfo = body.commitId ? ` Commit: ${body.commitId}.` : "";
+        elements.backupConfigFeedback.textContent = `${body.message}${pathInfo}${commitInfo}`;
+    } catch (error) {
+        elements.backupConfigFeedback.textContent = `Falha no backup. ${error.message}`;
+    }
+}
+
+async function previewImport() {
+    elements.backupConfigFeedback.textContent = "Validando snapshot...";
+
+    try {
+        const response = await fetch(API.importPreview, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({})
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(body.message || "Snapshot invalido.");
+        }
+
+        elements.backupConfigFeedback.textContent = `${body.cardsCount} cards no snapshot: ${body.newCardsCount} novos, ${body.existingCardsCount} existentes. Schema ${body.schemaVersion}.`;
+    } catch (error) {
+        elements.backupConfigFeedback.textContent = `Nao foi possivel validar. ${error.message}`;
+    }
+}
+
+async function importSnapshot() {
+    if (!confirm("Importar exports/study-flow-export.json e atualizar cards existentes quando encontrados?")) {
+        return;
+    }
+
+    elements.backupConfigFeedback.textContent = "Importando snapshot...";
+
+    try {
+        const response = await fetch(API.importSnapshot, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({})
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(body.message || "Importacao nao concluida.");
+        }
+
+        elements.backupConfigFeedback.textContent = body.message;
+        await loadCards();
+    } catch (error) {
+        elements.backupConfigFeedback.textContent = `Nao foi possivel importar. ${error.message}`;
     }
 }
 

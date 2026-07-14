@@ -30,6 +30,7 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.1.0.202411261347-r")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("org.xerial:sqlite-jdbc")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")

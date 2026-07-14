@@ -21,6 +21,9 @@
                 <button class="icon-action ghost-button" id="openAnkiConfigButton" type="button" aria-label="Configurar Anki" data-tooltip="Anki">
                     <span class="icon anki-icon" aria-hidden="true"></span>
                 </button>
+                <button class="icon-action ghost-button" id="openBackupConfigButton" type="button" aria-label="Exportar e backup" data-tooltip="Backup">
+                    <span class="icon backup-icon" aria-hidden="true"></span>
+                </button>
                 <button class="icon-action ghost-button" id="refreshButton" type="button" aria-label="Atualizar estudos" data-tooltip="Atualizar">
                     <span class="icon refresh-icon" aria-hidden="true"></span>
                 </button>
@@ -179,6 +182,50 @@
                     <button class="ghost-button" id="testAnkiConnectionButton" type="button">Testar conexao</button>
                     <button class="ghost-button" id="cancelAnkiConfigButton" type="button">Cancelar</button>
                     <button class="primary-button" type="submit">Salvar Anki</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="backupConfigBackdrop" hidden>
+        <section class="modal modal-compact backup-modal" role="dialog" aria-modal="true" aria-labelledby="backupConfigTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">MVP3</p>
+                    <h2 id="backupConfigTitle">Export, backup e GitHub</h2>
+                    <p class="modal-subtitle" id="backupConfigStatus">Gere snapshots locais e envie para GitHub somente por acao explicita.</p>
+                </div>
+                <button class="icon-button" id="closeBackupConfigButton" type="button" aria-label="Fechar">x</button>
+            </div>
+
+            <form id="backupConfigForm">
+                <div class="form-grid">
+                    <label class="field wide">
+                        <span>Remote GitHub</span>
+                        <input id="backupRemoteInput" name="remoteUrl" type="url" placeholder="https://github.com/usuario/study-flow-backup.git">
+                    </label>
+                    <label class="field wide">
+                        <span>Token</span>
+                        <input id="backupTokenInput" name="token" type="password" placeholder="Deixe em branco para manter o token atual">
+                        <small class="field-hint">O token fica local e nao entra no snapshot JSON.</small>
+                    </label>
+                </div>
+
+                <div class="backup-actions" aria-label="Acoes de backup">
+                    <button class="ghost-button" id="exportJsonButton" type="button">Exportar JSON</button>
+                    <button class="ghost-button" id="exportMarkdownButton" type="button">Exportar Markdown</button>
+                    <button class="ghost-button" id="backupSqliteButton" type="button">Backup SQLite</button>
+                    <button class="ghost-button" id="commitExportsButton" type="button">Commit local</button>
+                    <button class="ghost-button" id="pushBackupButton" type="button">Push GitHub</button>
+                    <button class="ghost-button" id="previewImportButton" type="button">Validar import</button>
+                    <button class="ghost-button" id="importSnapshotButton" type="button">Importar snapshot</button>
+                </div>
+
+                <div class="form-feedback backup-feedback" id="backupConfigFeedback" role="alert"></div>
+
+                <div class="modal-actions">
+                    <button class="ghost-button" id="cancelBackupConfigButton" type="button">Cancelar</button>
+                    <button class="primary-button" type="submit">Salvar GitHub</button>
                 </div>
             </form>
         </section>

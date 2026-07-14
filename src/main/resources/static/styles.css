@@ -261,6 +261,11 @@ h2 {
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11 2a1 1 0 0 1 2 0v4.07a7.98 7.98 0 0 1 6.93 6.93H22a1 1 0 1 1 0 2h-2.07A7.98 7.98 0 0 1 13 21.93V22a1 1 0 1 1-2 0v-.07A7.98 7.98 0 0 1 4.07 15H2a1 1 0 1 1 0-2h2.07A7.98 7.98 0 0 1 11 6.07V2Zm1 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm-1 3a1 1 0 1 1 2 0v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2H9a1 1 0 1 1 0-2h2v-2Z'/%3E%3C/svg%3E");
 }
 
+.backup-icon {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V8.83a3 3 0 0 0-.88-2.12l-2.83-2.83A3 3 0 0 0 15.17 3H6Zm9 2.41L18.59 9H16a1 1 0 0 1-1-1V5.41ZM8 5h4v5a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5Zm4 8a1 1 0 0 1 1 1v1.59l1.29-1.3a1 1 0 1 1 1.42 1.42l-3 3a1 1 0 0 1-1.42 0l-3-3a1 1 0 1 1 1.42-1.42l1.29 1.3V14a1 1 0 0 1 1-1Z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V8.83a3 3 0 0 0-.88-2.12l-2.83-2.83A3 3 0 0 0 15.17 3H6Zm9 2.41L18.59 9H16a1 1 0 0 1-1-1V5.41ZM8 5h4v5a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V5Zm4 8a1 1 0 0 1 1 1v1.59l1.29-1.3a1 1 0 1 1 1.42 1.42l-3 3a1 1 0 0 1-1.42 0l-3-3a1 1 0 1 1 1.42-1.42l1.29 1.3V14a1 1 0 0 1 1-1Z'/%3E%3C/svg%3E");
+}
+
 .edit-icon {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m16.86 3.49 3.65 3.65-10.6 10.6-4.24.59.59-4.24 10.6-10.6Zm1.41-1.42a2 2 0 0 0-2.82 0L4.56 12.96a2 2 0 0 0-.56 1.09l-.86 6.1a1 1 0 0 0 1.13 1.13l6.1-.86a2 2 0 0 0 1.09-.56L22.35 8.97a2 2 0 0 0 0-2.82l-4.08-4.08Z'/%3E%3C/svg%3E");
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m16.86 3.49 3.65 3.65-10.6 10.6-4.24.59.59-4.24 10.6-10.6Zm1.41-1.42a2 2 0 0 0-2.82 0L4.56 12.96a2 2 0 0 0-.56 1.09l-.86 6.1a1 1 0 0 0 1.13 1.13l6.1-.86a2 2 0 0 0 1.09-.56L22.35 8.97a2 2 0 0 0 0-2.82l-4.08-4.08Z'/%3E%3C/svg%3E");
@@ -852,6 +857,27 @@ h2 {
 
 .modal-compact {
     width: min(560px, 100%);
+}
+
+.backup-modal {
+    width: min(760px, 100%);
+}
+
+.backup-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 9px;
+    margin: 14px 0;
+}
+
+.backup-actions .ghost-button {
+    width: 100%;
+}
+
+.backup-feedback {
+    min-height: 38px;
+    color: var(--text-soft);
+    line-height: 1.35;
 }
 
 .detail-modal {
