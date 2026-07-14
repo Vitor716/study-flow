@@ -1,5 +1,8 @@
 const API = {
     cards: "/api/study-card",
+    obsidianConfig: "/api/obsidian/config",
+    obsidianNote: (cardId) => `/api/cards/${cardId}/obsidian-note`,
+    openObsidian: (cardId) => `/api/cards/${cardId}/open-obsidian`,
     stageHistory: "/api/stage-history",
     resources: (cardId) => `/api/cards/${cardId}/resources`,
     resource: (cardId, resourceId) => `/api/cards/${cardId}/resources/${resourceId}`,
@@ -29,6 +32,7 @@ const state = {
     editingEvidenceId: null,
     resources: [],
     evidence: [],
+    obsidianConfig: null,
     filters: {
         context: "",
         priority: "",
@@ -51,6 +55,16 @@ const elements = {
     priorityFilter: document.querySelector("#priorityFilter"),
     refreshButton: document.querySelector("#refreshButton"),
     openCreateModalButton: document.querySelector("#openCreateModalButton"),
+    openObsidianConfigButton: document.querySelector("#openObsidianConfigButton"),
+    obsidianConfigBackdrop: document.querySelector("#obsidianConfigBackdrop"),
+    closeObsidianConfigButton: document.querySelector("#closeObsidianConfigButton"),
+    cancelObsidianConfigButton: document.querySelector("#cancelObsidianConfigButton"),
+    obsidianConfigForm: document.querySelector("#obsidianConfigForm"),
+    obsidianConfigStatus: document.querySelector("#obsidianConfigStatus"),
+    obsidianVaultNameInput: document.querySelector("#obsidianVaultNameInput"),
+    obsidianVaultPathInput: document.querySelector("#obsidianVaultPathInput"),
+    obsidianNotesFolderInput: document.querySelector("#obsidianNotesFolderInput"),
+    obsidianConfigFeedback: document.querySelector("#obsidianConfigFeedback"),
     modalBackdrop: document.querySelector("#modalBackdrop"),
     modalTitle: document.querySelector("#modalTitle"),
     modalSubtitle: document.querySelector("#modalSubtitle"),
@@ -105,18 +119,28 @@ const elements = {
     evidenceFormTitle: document.querySelector("#evidenceFormTitle"),
     cancelEvidenceEditButton: document.querySelector("#cancelEvidenceEditButton"),
     saveEvidenceButton: document.querySelector("#saveEvidenceButton"),
+    obsidianCardStatus: document.querySelector("#obsidianCardStatus"),
+    obsidianCardBadge: document.querySelector("#obsidianCardBadge"),
+    obsidianCardPath: document.querySelector("#obsidianCardPath"),
+    createObsidianNoteButton: document.querySelector("#createObsidianNoteButton"),
+    createObsidianAlternativeButton: document.querySelector("#createObsidianAlternativeButton"),
+    openObsidianNoteButton: document.querySelector("#openObsidianNoteButton"),
     detailFormFeedback: document.querySelector("#detailFormFeedback")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
     bindEvents();
     renderBoard();
+    loadObsidianConfig();
     loadCards();
 });
 
 function bindEvents() {
     elements.refreshButton.addEventListener("click", loadCards);
     elements.openCreateModalButton.addEventListener("click", () => openModal());
+    elements.openObsidianConfigButton.addEventListener("click", openObsidianConfigModal);
+    elements.closeObsidianConfigButton.addEventListener("click", closeObsidianConfigModal);
+    elements.cancelObsidianConfigButton.addEventListener("click", closeObsidianConfigModal);
     elements.closeModalButton.addEventListener("click", closeModal);
     elements.cancelCreateButton.addEventListener("click", closeModal);
     elements.closeMoveModalButton.addEventListener("click", closeMoveModal);
@@ -139,6 +163,11 @@ function bindEvents() {
             closeDetailModal();
         }
     });
+    elements.obsidianConfigBackdrop.addEventListener("click", (event) => {
+        if (event.target === elements.obsidianConfigBackdrop) {
+            closeObsidianConfigModal();
+        }
+    });
 
     elements.contextFilter.addEventListener("input", (event) => {
         state.filters.context = event.target.value.trim().toLowerCase();
@@ -156,6 +185,7 @@ function bindEvents() {
     });
 
     elements.createCardForm.addEventListener("submit", saveCard);
+    elements.obsidianConfigForm.addEventListener("submit", saveObsidianConfig);
     elements.moveCardForm.addEventListener("submit", confirmPendingMove);
     elements.resourceForm.addEventListener("submit", saveResource);
     elements.evidenceForm.addEventListener("submit", saveEvidence);
@@ -163,6 +193,9 @@ function bindEvents() {
     elements.cancelEvidenceEditButton.addEventListener("click", resetEvidenceForm);
     elements.resourcesList.addEventListener("click", handleResourceAction);
     elements.evidenceList.addEventListener("click", handleEvidenceAction);
+    elements.createObsidianNoteButton.addEventListener("click", () => createObsidianNote(false));
+    elements.createObsidianAlternativeButton.addEventListener("click", () => createObsidianNote(true));
+    elements.openObsidianNoteButton.addEventListener("click", openObsidianNote);
     elements.board.addEventListener("click", handleBoardClick);
     elements.consolidatedBoard.addEventListener("click", handleBoardClick);
     elements.studyTimeline.addEventListener("click", handleBoardClick);
@@ -180,6 +213,10 @@ function bindEvents() {
 
         if (!elements.modalBackdrop.hidden) {
             closeModal();
+        }
+
+        if (!elements.obsidianConfigBackdrop.hidden) {
+            closeObsidianConfigModal();
         }
 
         if (!elements.moveModalBackdrop.hidden) {
@@ -220,6 +257,71 @@ async function moveCard(card, targetStage, reason) {
         setBoardStatus(`Nao foi possivel mover o card. ${error.message}`);
         throw error;
     }
+}
+
+async function loadObsidianConfig() {
+    try {
+        const response = await fetch(API.obsidianConfig, { headers: { Accept: "application/json" } });
+        if (!response.ok) {
+            throw new Error("Nao foi possivel carregar a configuracao.");
+        }
+        state.obsidianConfig = await response.json();
+        renderObsidianConfigStatus();
+    } catch (error) {
+        state.obsidianConfig = null;
+        elements.obsidianConfigStatus.textContent = error.message;
+    }
+}
+
+async function saveObsidianConfig(event) {
+    event.preventDefault();
+    elements.obsidianConfigFeedback.textContent = "";
+
+    const payload = {
+        vaultName: elements.obsidianVaultNameInput.value.trim(),
+        vaultPath: elements.obsidianVaultPathInput.value.trim(),
+        notesFolder: elements.obsidianNotesFolderInput.value.trim() || "04 - CEREBRO"
+    };
+
+    try {
+        const response = await fetch(API.obsidianConfig, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error("Revise os dados do vault e tente novamente.");
+        }
+
+        state.obsidianConfig = await response.json();
+        renderObsidianConfigStatus();
+        renderObsidianPanel();
+        elements.obsidianConfigFeedback.textContent = state.obsidianConfig.status;
+    } catch (error) {
+        elements.obsidianConfigFeedback.textContent = `Nao foi possivel salvar. ${error.message}`;
+    }
+}
+
+function openObsidianConfigModal() {
+    const config = state.obsidianConfig || {};
+    elements.obsidianVaultNameInput.value = config.vaultName || "";
+    elements.obsidianVaultPathInput.value = config.vaultPath || "";
+    elements.obsidianNotesFolderInput.value = config.notesFolder || "04 - CEREBRO";
+    elements.obsidianConfigFeedback.textContent = "";
+    renderObsidianConfigStatus();
+    elements.obsidianConfigBackdrop.hidden = false;
+    elements.obsidianVaultNameInput.focus();
+}
+
+function closeObsidianConfigModal() {
+    elements.obsidianConfigBackdrop.hidden = true;
+    elements.obsidianConfigForm.reset();
+    elements.obsidianConfigFeedback.textContent = "";
+}
+
+function renderObsidianConfigStatus() {
+    const config = state.obsidianConfig;
+    elements.obsidianConfigStatus.textContent = config?.status || "Configuracao do Obsidian indisponivel.";
 }
 
 async function loadCards() {
@@ -655,6 +757,7 @@ async function openCardDetail(card) {
     resetResourceForm();
     resetEvidenceForm();
     renderEvidenceAvailability(card);
+    renderObsidianPanel();
     renderDetailProgress(card);
     elements.detailModalBackdrop.hidden = false;
     await loadCardArtifacts(card.id);
@@ -669,6 +772,110 @@ function closeDetailModal() {
     state.resources = [];
     state.evidence = [];
     elements.evidencePanel.hidden = false;
+}
+
+function renderObsidianPanel(message = "") {
+    if (!elements.obsidianCardStatus || !state.activeCard) {
+        return;
+    }
+
+    const config = state.obsidianConfig;
+    const card = state.activeCard;
+    const hasNote = Boolean(card.obsidianPath);
+    const canUseObsidian = Boolean(config?.configured && config?.vaultPathExists);
+
+    elements.obsidianCardPath.textContent = card.obsidianPath || "Sem nota vinculada";
+    elements.obsidianCardBadge.textContent = hasNote ? "Vinculada" : (canUseObsidian ? "Pronta" : "Off");
+    elements.openObsidianNoteButton.hidden = !hasNote;
+    elements.createObsidianNoteButton.hidden = hasNote;
+    elements.createObsidianAlternativeButton.hidden = !hasNote;
+    elements.createObsidianNoteButton.textContent = "Criar ou vincular";
+    elements.createObsidianAlternativeButton.disabled = !canUseObsidian;
+    elements.createObsidianNoteButton.disabled = !canUseObsidian || hasNote;
+    elements.openObsidianNoteButton.disabled = !canUseObsidian;
+
+    if (message) {
+        elements.obsidianCardStatus.textContent = message;
+    } else if (!config?.configured) {
+        elements.obsidianCardStatus.textContent = "Configure o vault para criar e abrir notas Markdown.";
+    } else if (!config.vaultPathExists) {
+        elements.obsidianCardStatus.textContent = "O caminho do vault configurado nao existe.";
+    } else if (hasNote) {
+        elements.obsidianCardStatus.textContent = "Nota sincronizada. Use abrir para continuar no Obsidian.";
+    } else {
+        elements.obsidianCardStatus.textContent = "Crie uma nota para registrar o refinamento deste card.";
+    }
+}
+
+async function createObsidianNote(createAlternative) {
+    if (!state.activeCard) {
+        return;
+    }
+
+    elements.detailFormFeedback.textContent = "";
+    renderObsidianPanel(createAlternative ? "Criando copia da nota..." : "Criando ou vinculando nota...");
+
+    try {
+        const response = await fetch(API.obsidianNote(state.activeCard.id), {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ createAlternative })
+        });
+        const result = await response.json();
+
+        if (response.status === 409) {
+            state.activeCard = { ...state.activeCard, obsidianPath: result.obsidianPath };
+            state.cards = state.cards.map((card) => card.id === state.activeCard.id ? state.activeCard : card);
+            renderBoard();
+            renderObsidianPanel("Nota existente vinculada ao card.");
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(result.message || "Nao foi possivel gerar a nota.");
+        }
+
+        state.activeCard = {
+            ...state.activeCard,
+            obsidianPath: result.obsidianPath,
+            obsidianNoteCreatedAt: new Date().toISOString()
+        };
+        state.cards = state.cards.map((card) => card.id === state.activeCard.id ? state.activeCard : card);
+        renderBoard();
+        renderObsidianPanel(result.message);
+    } catch (error) {
+        renderObsidianPanel(error.message);
+    }
+}
+
+async function openObsidianNote() {
+    if (!state.activeCard) {
+        return;
+    }
+
+    elements.detailFormFeedback.textContent = "";
+
+    try {
+        const response = await fetch(API.openObsidian(state.activeCard.id), {
+            method: "POST",
+            headers: { Accept: "application/json" }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || "Nao foi possivel abrir a nota.");
+        }
+
+        state.activeCard = {
+            ...state.activeCard,
+            obsidianPath: result.obsidianPath,
+            obsidianLastOpenedAt: new Date().toISOString()
+        };
+        state.cards = state.cards.map((card) => card.id === state.activeCard.id ? state.activeCard : card);
+        renderObsidianPanel(result.message);
+        window.location.href = result.deepLink;
+    } catch (error) {
+        renderObsidianPanel(error.message);
+    }
 }
 
 async function deleteActiveCard() {

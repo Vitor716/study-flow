@@ -1,6 +1,6 @@
 # Study Flow
 
-Aplicacao local em Kotlin/Ktor para acompanhar estudos em um fluxo visual.
+Aplicacao local em Kotlin/Spring Boot para acompanhar estudos em um fluxo visual.
 
 ## Requisitos
 
@@ -41,6 +41,24 @@ http://localhost:8732
 
 Na primeira execucao o SQLite cria o arquivo `flow-study.db` automaticamente e o Flyway roda as migrations em `src/main/resources/db/migration`.
 
+Quando nenhum banco e configurado por variavel de ambiente, a aplicacao usa `%APPDATA%\StudyFlow\flow-study.db` no Windows.
+
+## Gerar executavel Windows
+
+Com JDK 21 instalado:
+
+```powershell
+.\gradlew.bat packageExe
+```
+
+O executavel fica em:
+
+```text
+build\exe\StudyFlow\StudyFlow.exe
+```
+
+Ao abrir esse `.exe`, o servidor local inicia e o navegador abre em `http://localhost:8732`.
+
 ## Rodar com poucos cliques no Windows
 
 Use duplo clique em:
@@ -49,13 +67,15 @@ Use duplo clique em:
 run-local.bat
 ```
 
-O script compila a aplicacao e deixa o servidor aberto em `http://localhost:8732`.
+O script compila a aplicacao, fixa o banco em `flow-study.db` na raiz do projeto e deixa o servidor aberto em `http://localhost:8732`.
 
 Para uso diario, sem recompilar toda vez, use:
 
 ```text
 start-study-flow.bat
 ```
+
+Esse atalho tambem aponta para o mesmo `flow-study.db`, entao os dados continuam os mesmos depois de fechar e abrir a pagina ou reiniciar o servidor.
 
 Para abrir apenas o navegador no endereco local, use:
 

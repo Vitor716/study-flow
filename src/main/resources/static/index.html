@@ -15,6 +15,9 @@
                 <p class="topbar-subtitle">Transforme um gatilho em cards de estudo e avance cada um ate consolidar o aprendizado.</p>
             </div>
             <div class="topbar-actions">
+                <button class="icon-action ghost-button" id="openObsidianConfigButton" type="button" aria-label="Configurar Obsidian" data-tooltip="Obsidian">
+                    <span class="icon settings-icon" aria-hidden="true"></span>
+                </button>
                 <button class="icon-action ghost-button" id="refreshButton" type="button" aria-label="Atualizar estudos" data-tooltip="Atualizar">
                     <span class="icon refresh-icon" aria-hidden="true"></span>
                 </button>
@@ -90,6 +93,46 @@
                 </section>
             </section>
         </main>
+    </div>
+
+    <div class="modal-backdrop" id="obsidianConfigBackdrop" hidden>
+        <section class="modal modal-compact" role="dialog" aria-modal="true" aria-labelledby="obsidianConfigTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Obsidian</p>
+                    <h2 id="obsidianConfigTitle">Configurar vault</h2>
+                    <p class="modal-subtitle" id="obsidianConfigStatus">Carregando configuracao...</p>
+                </div>
+                <button class="icon-button" id="closeObsidianConfigButton" type="button" aria-label="Fechar">x</button>
+            </div>
+
+            <form id="obsidianConfigForm">
+                <div class="form-grid">
+                    <label class="field wide">
+                        <span>Nome do vault no Obsidian</span>
+                        <input id="obsidianVaultNameInput" name="vaultName" type="text" placeholder="Main notes" required>
+                        <small class="field-hint">Use o mesmo nome exibido na lista de vaults do Obsidian.</small>
+                    </label>
+                    <label class="field wide">
+                        <span>Pasta local do vault</span>
+                        <input id="obsidianVaultPathInput" name="vaultPath" type="text" placeholder="C:\Users\Vitor\Documents\Obsidian Vault\Main notes" required>
+                        <small class="field-hint">Este caminho deve apontar para a pasta raiz do vault.</small>
+                    </label>
+                    <label class="field wide">
+                        <span>Pasta dentro do vault</span>
+                        <input id="obsidianNotesFolderInput" name="notesFolder" type="text" placeholder="04 - CEREBRO">
+                        <small class="field-hint">Deixe em branco para criar as notas na raiz do vault.</small>
+                    </label>
+                </div>
+
+                <div class="form-feedback" id="obsidianConfigFeedback" role="alert"></div>
+
+                <div class="modal-actions">
+                    <button class="ghost-button" id="cancelObsidianConfigButton" type="button">Cancelar</button>
+                    <button class="primary-button" type="submit">Salvar vault</button>
+                </div>
+            </form>
+        </section>
     </div>
 
     <div class="modal-backdrop" id="modalBackdrop" hidden>
@@ -228,6 +271,25 @@
             </div>
 
             <div class="detail-stack">
+                <section class="detail-panel obsidian-panel">
+                    <div class="panel-header panel-header-rich">
+                        <div>
+                            <p class="eyebrow">Obsidian</p>
+                            <h3>Nota do card</h3>
+                            <p id="obsidianCardStatus">Configure o vault para criar e abrir a nota Markdown.</p>
+                        </div>
+                        <span id="obsidianCardBadge">Off</span>
+                    </div>
+                    <div class="obsidian-note-row">
+                        <code id="obsidianCardPath">Sem nota vinculada</code>
+                        <div class="artifact-actions">
+                            <button class="ghost-button" id="createObsidianNoteButton" type="button">Criar ou vincular</button>
+                            <button class="ghost-button" id="createObsidianAlternativeButton" type="button" hidden>Criar copia</button>
+                            <button class="primary-button" id="openObsidianNoteButton" type="button" hidden>Abrir no Obsidian</button>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="detail-panel resources-panel">
                     <div class="panel-header panel-header-rich">
                         <div>

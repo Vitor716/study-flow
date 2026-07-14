@@ -28,6 +28,15 @@ class StudyCard {
     @Column(name = "order_index")
     var orderIndex: Int = 0
 
+    @Column(name = "obsidian_path")
+    var obsidianPath: String? = null
+
+    @Column(name = "obsidian_note_created_at")
+    var obsidianNoteCreatedAt: LocalDateTime? = null
+
+    @Column(name = "obsidian_last_opened_at")
+    var obsidianLastOpenedAt: LocalDateTime? = null
+
     @Column(name = "created_at")
     var createdAt: LocalDateTime = LocalDateTime.now()
 

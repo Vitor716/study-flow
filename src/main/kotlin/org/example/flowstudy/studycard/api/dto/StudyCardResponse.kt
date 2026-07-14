@@ -14,6 +14,9 @@ data class StudyCardResponse(
     val estagio: Estagio,
     val orderIndex: Int,
     val tags: List<CardTagResponse>,
+    val obsidianPath: String?,
+    val obsidianNoteCreatedAt: LocalDateTime?,
+    val obsidianLastOpenedAt: LocalDateTime?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 ) {
@@ -28,6 +31,9 @@ data class StudyCardResponse(
                 estagio = studyCard.estagio,
                 orderIndex = studyCard.orderIndex,
                 tags = studyCard.tags.map(CardTagResponse::fromEntity),
+                obsidianPath = studyCard.obsidianPath,
+                obsidianNoteCreatedAt = studyCard.obsidianNoteCreatedAt,
+                obsidianLastOpenedAt = studyCard.obsidianLastOpenedAt,
                 createdAt = studyCard.createdAt,
                 updatedAt = studyCard.updatedAt
             )
