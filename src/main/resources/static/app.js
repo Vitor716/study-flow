@@ -1,13 +1,22 @@
 const API = {
     cards: "/api/study-card",
     obsidianConfig: "/api/obsidian/config",
+    ankiConfig: "/api/anki/config",
+    ankiStatus: "/api/anki/status",
     obsidianNote: (cardId) => `/api/cards/${cardId}/obsidian-note`,
     openObsidian: (cardId) => `/api/cards/${cardId}/open-obsidian`,
     stageHistory: "/api/stage-history",
     resources: (cardId) => `/api/cards/${cardId}/resources`,
     resource: (cardId, resourceId) => `/api/cards/${cardId}/resources/${resourceId}`,
     evidence: (cardId) => `/api/cards/${cardId}/evidence`,
-    evidenceItem: (cardId, evidenceId) => `/api/cards/${cardId}/evidence/${evidenceId}`
+    evidenceItem: (cardId, evidenceId) => `/api/cards/${cardId}/evidence/${evidenceId}`,
+    manualFlashcards: (cardId) => `/api/cards/${cardId}/manual-flashcards`,
+    checklist: (cardId) => `/api/cards/${cardId}/consolidation-checklist`,
+    ankiNotes: (cardId) => `/api/cards/${cardId}/anki-notes`,
+    ankiMature: (cardId) => `/api/cards/${cardId}/anki-notes/sync-mature`,
+    reviewDone: (cardId) => `/api/cards/${cardId}/review/done`,
+    reviewSkip: (cardId) => `/api/cards/${cardId}/review/skip`,
+    reviewSuggestions: "/api/reviews/suggestions"
 };
 
 const STAGES = [
@@ -33,6 +42,9 @@ const state = {
     resources: [],
     evidence: [],
     obsidianConfig: null,
+    ankiConfig: null,
+    checklist: null,
+    ankiNotes: [],
     filters: {
         context: "",
         priority: "",
@@ -55,6 +67,19 @@ const elements = {
     priorityFilter: document.querySelector("#priorityFilter"),
     refreshButton: document.querySelector("#refreshButton"),
     openCreateModalButton: document.querySelector("#openCreateModalButton"),
+    openAnkiConfigButton: document.querySelector("#openAnkiConfigButton"),
+    ankiConfigBackdrop: document.querySelector("#ankiConfigBackdrop"),
+    closeAnkiConfigButton: document.querySelector("#closeAnkiConfigButton"),
+    cancelAnkiConfigButton: document.querySelector("#cancelAnkiConfigButton"),
+    testAnkiConnectionButton: document.querySelector("#testAnkiConnectionButton"),
+    ankiConfigForm: document.querySelector("#ankiConfigForm"),
+    ankiConfigStatus: document.querySelector("#ankiConfigStatus"),
+    ankiDeckNameInput: document.querySelector("#ankiDeckNameInput"),
+    ankiModelNameInput: document.querySelector("#ankiModelNameInput"),
+    ankiMatureThresholdInput: document.querySelector("#ankiMatureThresholdInput"),
+    ankiDailyLimitInput: document.querySelector("#ankiDailyLimitInput"),
+    ankiAutoAbsorbInput: document.querySelector("#ankiAutoAbsorbInput"),
+    ankiConfigFeedback: document.querySelector("#ankiConfigFeedback"),
     openObsidianConfigButton: document.querySelector("#openObsidianConfigButton"),
     obsidianConfigBackdrop: document.querySelector("#obsidianConfigBackdrop"),
     closeObsidianConfigButton: document.querySelector("#closeObsidianConfigButton"),
@@ -125,6 +150,25 @@ const elements = {
     createObsidianNoteButton: document.querySelector("#createObsidianNoteButton"),
     createObsidianAlternativeButton: document.querySelector("#createObsidianAlternativeButton"),
     openObsidianNoteButton: document.querySelector("#openObsidianNoteButton"),
+    manualFlashcardsForm: document.querySelector("#manualFlashcardsForm"),
+    manualFlashcardsStatus: document.querySelector("#manualFlashcardsStatus"),
+    manualFlashcardsBadge: document.querySelector("#manualFlashcardsBadge"),
+    manualFlashcardsCountInput: document.querySelector("#manualFlashcardsCountInput"),
+    manualFlashcardsDateInput: document.querySelector("#manualFlashcardsDateInput"),
+    reviewStatus: document.querySelector("#reviewStatus"),
+    markReviewDoneButton: document.querySelector("#markReviewDoneButton"),
+    skipReviewButton: document.querySelector("#skipReviewButton"),
+    checklistPanel: document.querySelector("#checklistPanel"),
+    checklistStatus: document.querySelector("#checklistStatus"),
+    checklistCount: document.querySelector("#checklistCount"),
+    qualityChecklist: document.querySelector("#qualityChecklist"),
+    ankiCardStatus: document.querySelector("#ankiCardStatus"),
+    ankiCardBadge: document.querySelector("#ankiCardBadge"),
+    ankiNoteForm: document.querySelector("#ankiNoteForm"),
+    ankiFrontInput: document.querySelector("#ankiFrontInput"),
+    ankiBackInput: document.querySelector("#ankiBackInput"),
+    syncAnkiMatureButton: document.querySelector("#syncAnkiMatureButton"),
+    ankiNotesList: document.querySelector("#ankiNotesList"),
     detailFormFeedback: document.querySelector("#detailFormFeedback")
 };
 
@@ -132,12 +176,17 @@ document.addEventListener("DOMContentLoaded", () => {
     bindEvents();
     renderBoard();
     loadObsidianConfig();
+    loadAnkiConfig();
     loadCards();
 });
 
 function bindEvents() {
     elements.refreshButton.addEventListener("click", loadCards);
     elements.openCreateModalButton.addEventListener("click", () => openModal());
+    elements.openAnkiConfigButton.addEventListener("click", openAnkiConfigModal);
+    elements.closeAnkiConfigButton.addEventListener("click", closeAnkiConfigModal);
+    elements.cancelAnkiConfigButton.addEventListener("click", closeAnkiConfigModal);
+    elements.testAnkiConnectionButton.addEventListener("click", testAnkiConnection);
     elements.openObsidianConfigButton.addEventListener("click", openObsidianConfigModal);
     elements.closeObsidianConfigButton.addEventListener("click", closeObsidianConfigModal);
     elements.cancelObsidianConfigButton.addEventListener("click", closeObsidianConfigModal);
@@ -185,6 +234,7 @@ function bindEvents() {
     });
 
     elements.createCardForm.addEventListener("submit", saveCard);
+    elements.ankiConfigForm.addEventListener("submit", saveAnkiConfig);
     elements.obsidianConfigForm.addEventListener("submit", saveObsidianConfig);
     elements.moveCardForm.addEventListener("submit", confirmPendingMove);
     elements.resourceForm.addEventListener("submit", saveResource);
@@ -196,6 +246,12 @@ function bindEvents() {
     elements.createObsidianNoteButton.addEventListener("click", () => createObsidianNote(false));
     elements.createObsidianAlternativeButton.addEventListener("click", () => createObsidianNote(true));
     elements.openObsidianNoteButton.addEventListener("click", openObsidianNote);
+    elements.manualFlashcardsForm.addEventListener("submit", saveManualFlashcards);
+    elements.qualityChecklist.addEventListener("change", saveChecklist);
+    elements.ankiNoteForm.addEventListener("submit", createAnkiNote);
+    elements.syncAnkiMatureButton.addEventListener("click", syncAnkiMature);
+    elements.markReviewDoneButton.addEventListener("click", () => applyReviewAction("done"));
+    elements.skipReviewButton.addEventListener("click", () => applyReviewAction("skip"));
     elements.board.addEventListener("click", handleBoardClick);
     elements.consolidatedBoard.addEventListener("click", handleBoardClick);
     elements.studyTimeline.addEventListener("click", handleBoardClick);
@@ -217,6 +273,10 @@ function bindEvents() {
 
         if (!elements.obsidianConfigBackdrop.hidden) {
             closeObsidianConfigModal();
+        }
+
+        if (!elements.ankiConfigBackdrop.hidden) {
+            closeAnkiConfigModal();
         }
 
         if (!elements.moveModalBackdrop.hidden) {
@@ -322,6 +382,89 @@ function closeObsidianConfigModal() {
 function renderObsidianConfigStatus() {
     const config = state.obsidianConfig;
     elements.obsidianConfigStatus.textContent = config?.status || "Configuracao do Obsidian indisponivel.";
+}
+
+async function loadAnkiConfig() {
+    try {
+        const response = await fetch(API.ankiConfig, { headers: { Accept: "application/json" } });
+        if (!response.ok) {
+            throw new Error("Nao foi possivel carregar a configuracao do Anki.");
+        }
+        state.ankiConfig = await response.json();
+        renderAnkiConfigStatus();
+    } catch (error) {
+        state.ankiConfig = null;
+        elements.ankiConfigStatus.textContent = error.message;
+    }
+}
+
+function openAnkiConfigModal() {
+    const config = state.ankiConfig || {};
+    elements.ankiDeckNameInput.value = config.deckName || "Study Flow";
+    elements.ankiModelNameInput.value = config.modelName || "Basic";
+    elements.ankiMatureThresholdInput.value = config.matureThresholdDays || 21;
+    elements.ankiDailyLimitInput.value = config.dailyReviewLimit || 8;
+    elements.ankiAutoAbsorbInput.checked = Boolean(config.autoAbsorbMature);
+    elements.ankiConfigFeedback.textContent = "";
+    renderAnkiConfigStatus();
+    elements.ankiConfigBackdrop.hidden = false;
+    elements.ankiDeckNameInput.focus();
+}
+
+function closeAnkiConfigModal() {
+    elements.ankiConfigBackdrop.hidden = true;
+    elements.ankiConfigForm.reset();
+    elements.ankiConfigFeedback.textContent = "";
+}
+
+function renderAnkiConfigStatus(message = "") {
+    const config = state.ankiConfig;
+    elements.ankiConfigStatus.textContent = message || (config
+        ? `Deck ${config.deckName} · mature em ${config.matureThresholdDays} dias · limite ${config.dailyReviewLimit}/dia.`
+        : "Configuracao do Anki indisponivel.");
+}
+
+async function saveAnkiConfig(event) {
+    event.preventDefault();
+    elements.ankiConfigFeedback.textContent = "";
+    const payload = {
+        deckName: elements.ankiDeckNameInput.value.trim(),
+        modelName: elements.ankiModelNameInput.value.trim() || "Basic",
+        matureThresholdDays: Number(elements.ankiMatureThresholdInput.value || 21),
+        dailyReviewLimit: Number(elements.ankiDailyLimitInput.value || 8),
+        autoAbsorbMature: elements.ankiAutoAbsorbInput.checked
+    };
+
+    try {
+        const response = await fetch(API.ankiConfig, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error("Revise deck, modelo e limites.");
+        }
+        state.ankiConfig = await response.json();
+        renderAnkiConfigStatus("Configuracao salva.");
+        elements.ankiConfigFeedback.textContent = "Configuracao salva.";
+    } catch (error) {
+        elements.ankiConfigFeedback.textContent = `Nao foi possivel salvar. ${error.message}`;
+    }
+}
+
+async function testAnkiConnection() {
+    elements.ankiConfigFeedback.textContent = "Testando localhost:8765...";
+    try {
+        const response = await fetch(API.ankiStatus, { headers: { Accept: "application/json" } });
+        if (!response.ok) {
+            throw new Error("Falha ao testar o AnkiConnect.");
+        }
+        const status = await response.json();
+        elements.ankiConfigFeedback.textContent = status.message + (status.version ? ` Versao ${status.version}.` : "");
+        renderAnkiConfigStatus(status.message);
+    } catch (error) {
+        elements.ankiConfigFeedback.textContent = `AnkiConnect indisponivel. ${error.message}`;
+    }
 }
 
 async function loadCards() {
@@ -758,6 +901,7 @@ async function openCardDetail(card) {
     resetEvidenceForm();
     renderEvidenceAvailability(card);
     renderObsidianPanel();
+    renderMvp2Panels();
     renderDetailProgress(card);
     elements.detailModalBackdrop.hidden = false;
     await loadCardArtifacts(card.id);
@@ -771,6 +915,8 @@ function closeDetailModal() {
     state.activeCard = null;
     state.resources = [];
     state.evidence = [];
+    state.checklist = null;
+    state.ankiNotes = [];
     elements.evidencePanel.hidden = false;
 }
 
@@ -909,23 +1055,32 @@ async function deleteActiveCard() {
 
 async function loadCardArtifacts(cardId) {
     elements.resourcesList.innerHTML = `<div class="empty-stage">Carregando recursos...</div>`;
+    elements.qualityChecklist.innerHTML = `<div class="empty-stage">Carregando checklist...</div>`;
+    elements.ankiNotesList.innerHTML = `<div class="empty-stage">Carregando notas...</div>`;
     const shouldLoadEvidence = shouldShowEvidencePanel();
     if (shouldLoadEvidence) {
         elements.evidenceList.innerHTML = `<div class="empty-stage">Carregando evidencias...</div>`;
     }
 
     try {
-        const [resources, evidence] = await Promise.all([
+        const [resources, evidence, checklist, ankiNotes] = await Promise.all([
             fetchResources(cardId),
-            shouldLoadEvidence ? fetchEvidence(cardId) : Promise.resolve([])
+            shouldLoadEvidence ? fetchEvidence(cardId) : Promise.resolve([]),
+            fetchChecklist(cardId),
+            fetchAnkiNotes(cardId)
         ]);
 
         state.resources = resources;
         state.evidence = evidence;
+        state.checklist = checklist;
+        state.ankiNotes = ankiNotes;
         renderResources();
         if (shouldLoadEvidence) {
             renderEvidence();
         }
+        renderChecklist();
+        renderAnkiNotes();
+        renderMvp2Panels();
     } catch (error) {
         elements.detailFormFeedback.textContent = `Nao foi possivel carregar o detalhe. ${error.message}`;
     }
@@ -949,6 +1104,219 @@ async function fetchEvidence(cardId) {
     }
 
     return response.json();
+}
+
+async function fetchChecklist(cardId) {
+    const response = await fetch(API.checklist(cardId), { headers: { Accept: "application/json" } });
+    if (!response.ok) {
+        throw new Error("Tente consultar a checklist novamente.");
+    }
+    return response.json();
+}
+
+async function fetchAnkiNotes(cardId) {
+    const response = await fetch(API.ankiNotes(cardId), { headers: { Accept: "application/json" } });
+    if (!response.ok) {
+        throw new Error("Tente consultar as notas do Anki novamente.");
+    }
+    return response.json();
+}
+
+function renderMvp2Panels() {
+    if (!state.activeCard) {
+        return;
+    }
+    const card = state.activeCard;
+    elements.manualFlashcardsCountInput.value = card.manualFlashcardsCount || "";
+    elements.manualFlashcardsDateInput.value = card.manualFlashcardsCreatedAt || new Date().toISOString().slice(0, 10);
+    elements.manualFlashcardsBadge.textContent = card.manualFlashcardsCount ? `${card.manualFlashcardsCount} cards` : "Manual";
+    elements.manualFlashcardsStatus.textContent = card.manualFlashcardsCount
+        ? `Flashcards criados em ${formatDate(card.manualFlashcardsCreatedAt)}.`
+        : "Registre a criacao manual para mover o card para consolidacao.";
+    elements.ankiFrontInput.value = card.titulo || "";
+    elements.ankiBackInput.value = card.descricao || card.contexto || "";
+    renderReviewStatus(card);
+}
+
+function renderReviewStatus(card) {
+    if (normalizeStage(card.estagio) !== "CONSOLIDACAO") {
+        elements.reviewStatus.textContent = "A revisao elastica aparece quando o card entra em consolidacao.";
+        elements.markReviewDoneButton.disabled = true;
+        elements.skipReviewButton.disabled = true;
+        return;
+    }
+
+    const due = card.nextReviewAt && card.nextReviewAt <= new Date().toISOString().slice(0, 10);
+    elements.reviewStatus.innerHTML = `
+        <span>Proxima revisao: <strong>${card.nextReviewAt ? formatDate(card.nextReviewAt) : "sem data"}</strong></span>
+        <span>Intervalo: <strong>${card.reviewIntervalDays || 3} dias</strong></span>
+        <span class="${due ? "review-due" : ""}">${due ? "Sugerida agora" : "Fila leve"}</span>
+    `;
+    elements.markReviewDoneButton.disabled = false;
+    elements.skipReviewButton.disabled = false;
+}
+
+function renderChecklist() {
+    if (!state.checklist) {
+        elements.qualityChecklist.innerHTML = `<div class="empty-stage">Checklist indisponivel.</div>`;
+        return;
+    }
+    elements.checklistCount.textContent = `${state.checklist.checkedCount}/${state.checklist.totalCount}`;
+    elements.checklistStatus.textContent = state.checklist.complete
+        ? "Checklist completa para uma consolidacao mais forte."
+        : "Checklist incompleta. Voce pode consolidar, mas revise a qualidade dos flashcards.";
+    elements.checklistStatus.classList.toggle("warning-text", !state.checklist.complete);
+    elements.qualityChecklist.innerHTML = state.checklist.items.map((item) => `
+        <label class="check-row">
+            <input type="checkbox" data-checklist-key="${escapeHtml(item.key)}" ${item.checked ? "checked" : ""}>
+            <span>${escapeHtml(item.label)}</span>
+        </label>
+    `).join("");
+}
+
+function renderAnkiNotes(message = "") {
+    elements.ankiCardStatus.textContent = message || (state.ankiNotes.length > 0
+        ? `${state.ankiNotes.length} nota(s) vinculada(s).`
+        : "Nenhuma nota criada pelo Study Flow ainda.");
+    elements.ankiCardBadge.textContent = state.ankiNotes.some((note) => note.mature) ? "Mature" : "Local";
+    if (state.ankiNotes.length === 0) {
+        elements.ankiNotesList.innerHTML = `<div class="empty-stage">Nenhuma nota Anki vinculada</div>`;
+        return;
+    }
+    elements.ankiNotesList.innerHTML = state.ankiNotes.map((note) => `
+        <article class="artifact-item">
+            <div class="artifact-card-main">
+                <div>
+                    <span class="artifact-type">Nota ${note.noteId}</span>
+                    <h4>${escapeHtml(note.front)}</h4>
+                </div>
+                <span class="mature-badge ${note.mature ? "is-mature" : ""}">${note.mature ? "Mature" : "Aprendendo"}</span>
+            </div>
+            <p>${formatTextWithLinks(note.back)}</p>
+            <p class="muted-line">Intervalo conhecido: ${note.lastKnownIntervalDays ?? "sem sync"} dias</p>
+        </article>
+    `).join("");
+}
+
+async function saveManualFlashcards(event) {
+    event.preventDefault();
+    if (!state.activeCard) {
+        return;
+    }
+    const payload = {
+        quantidade: Number(elements.manualFlashcardsCountInput.value),
+        dataCriacao: elements.manualFlashcardsDateInput.value
+    };
+    try {
+        const response = await fetch(API.manualFlashcards(state.activeCard.id), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error("Informe quantidade e data validas.");
+        }
+        const savedCard = await response.json();
+        updateActiveCard(savedCard);
+        renderMvp2Panels();
+        renderBoard();
+    } catch (error) {
+        elements.detailFormFeedback.textContent = `Nao foi possivel registrar flashcards. ${error.message}`;
+    }
+}
+
+async function saveChecklist() {
+    if (!state.activeCard) {
+        return;
+    }
+    const items = Array.from(elements.qualityChecklist.querySelectorAll("[data-checklist-key]"))
+        .map((input) => ({ key: input.dataset.checklistKey, checked: input.checked }));
+    try {
+        const response = await fetch(API.checklist(state.activeCard.id), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ items })
+        });
+        if (!response.ok) {
+            throw new Error("Nao foi possivel salvar a checklist.");
+        }
+        state.checklist = await response.json();
+        renderChecklist();
+    } catch (error) {
+        elements.detailFormFeedback.textContent = error.message;
+    }
+}
+
+async function createAnkiNote(event) {
+    event.preventDefault();
+    if (!state.activeCard) {
+        return;
+    }
+    renderAnkiNotes("Criando nota no Anki...");
+    try {
+        const response = await fetch(API.ankiNotes(state.activeCard.id), {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+                front: elements.ankiFrontInput.value.trim(),
+                back: elements.ankiBackInput.value.trim()
+            })
+        });
+        if (!response.ok) {
+            throw new Error("Abra o Anki, confira o AnkiConnect e tente novamente.");
+        }
+        const note = await response.json();
+        state.ankiNotes = [note, ...state.ankiNotes];
+        renderAnkiNotes("Nota criada no Anki.");
+    } catch (error) {
+        renderAnkiNotes(`Erro ao criar nota. ${error.message}`);
+    }
+}
+
+async function syncAnkiMature() {
+    if (!state.activeCard) {
+        return;
+    }
+    renderAnkiNotes("Sincronizando mature...");
+    try {
+        const response = await fetch(API.ankiMature(state.activeCard.id), {
+            method: "POST",
+            headers: { Accept: "application/json" }
+        });
+        if (!response.ok) {
+            throw new Error("Abra o Anki e tente sincronizar novamente.");
+        }
+        state.ankiNotes = await response.json();
+        renderAnkiNotes("Mature sincronizado.");
+        await loadCards();
+    } catch (error) {
+        renderAnkiNotes(`Nao foi possivel sincronizar. ${error.message}`);
+    }
+}
+
+async function applyReviewAction(action) {
+    if (!state.activeCard) {
+        return;
+    }
+    const url = action === "done" ? API.reviewDone(state.activeCard.id) : API.reviewSkip(state.activeCard.id);
+    try {
+        const response = await fetch(url, { method: "POST", headers: { Accept: "application/json" } });
+        if (!response.ok) {
+            throw new Error("Tente registrar a revisao novamente.");
+        }
+        const result = await response.json();
+        updateActiveCard(result.card);
+        renderMvp2Panels();
+        renderBoard();
+        elements.detailFormFeedback.textContent = result.message;
+    } catch (error) {
+        elements.detailFormFeedback.textContent = error.message;
+    }
+}
+
+function updateActiveCard(card) {
+    state.activeCard = card;
+    state.cards = state.cards.map((item) => item.id === card.id ? card : item);
 }
 
 async function saveResource(event) {
@@ -1567,6 +1935,17 @@ function tagsByCategory(tags = [], category) {
 
 function normalizeWhitespace(value) {
     return String(value).replace(/\s+/g, " ").trim();
+}
+
+function formatDate(value) {
+    if (!value) {
+        return "sem data";
+    }
+    const [year, month, day] = String(value).slice(0, 10).split("-");
+    if (!year || !month || !day) {
+        return value;
+    }
+    return `${day}/${month}/${year}`;
 }
 
 function escapeHtml(value) {

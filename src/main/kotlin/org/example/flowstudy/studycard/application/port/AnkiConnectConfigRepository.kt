@@ -1,0 +1,5 @@
+package org.example.flowstudy.studycard.application.port
+
+import org.example.flowstudy.studycard.infrastructure.persistence.JpaAnkiConnectConfigRepository
+
+interface AnkiConnectConfigRepository : JpaAnkiConnectConfigRepository

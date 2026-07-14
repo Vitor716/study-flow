@@ -18,6 +18,9 @@
                 <button class="icon-action ghost-button" id="openObsidianConfigButton" type="button" aria-label="Configurar Obsidian" data-tooltip="Obsidian">
                     <span class="icon settings-icon" aria-hidden="true"></span>
                 </button>
+                <button class="icon-action ghost-button" id="openAnkiConfigButton" type="button" aria-label="Configurar Anki" data-tooltip="Anki">
+                    <span class="icon anki-icon" aria-hidden="true"></span>
+                </button>
                 <button class="icon-action ghost-button" id="refreshButton" type="button" aria-label="Atualizar estudos" data-tooltip="Atualizar">
                     <span class="icon refresh-icon" aria-hidden="true"></span>
                 </button>
@@ -130,6 +133,52 @@
                 <div class="modal-actions">
                     <button class="ghost-button" id="cancelObsidianConfigButton" type="button">Cancelar</button>
                     <button class="primary-button" type="submit">Salvar vault</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="ankiConfigBackdrop" hidden>
+        <section class="modal modal-compact" role="dialog" aria-modal="true" aria-labelledby="ankiConfigTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">AnkiConnect</p>
+                    <h2 id="ankiConfigTitle">Configurar Anki</h2>
+                    <p class="modal-subtitle" id="ankiConfigStatus">Teste a conexao local com o Anki.</p>
+                </div>
+                <button class="icon-button" id="closeAnkiConfigButton" type="button" aria-label="Fechar">x</button>
+            </div>
+
+            <form id="ankiConfigForm">
+                <div class="form-grid">
+                    <label class="field wide">
+                        <span>Deck</span>
+                        <input id="ankiDeckNameInput" name="deckName" type="text" placeholder="Study Flow" required>
+                    </label>
+                    <label class="field">
+                        <span>Modelo</span>
+                        <input id="ankiModelNameInput" name="modelName" type="text" placeholder="Basic" required>
+                    </label>
+                    <label class="field">
+                        <span>Mature em dias</span>
+                        <input id="ankiMatureThresholdInput" name="matureThresholdDays" type="number" min="1" step="1" required>
+                    </label>
+                    <label class="field">
+                        <span>Limite diario</span>
+                        <input id="ankiDailyLimitInput" name="dailyReviewLimit" type="number" min="1" step="1" required>
+                    </label>
+                    <label class="check-row wide">
+                        <input id="ankiAutoAbsorbInput" name="autoAbsorbMature" type="checkbox">
+                        <span>Mover para absorvido automaticamente quando houver mature e evidencia.</span>
+                    </label>
+                </div>
+
+                <div class="form-feedback" id="ankiConfigFeedback" role="alert"></div>
+
+                <div class="modal-actions">
+                    <button class="ghost-button" id="testAnkiConnectionButton" type="button">Testar conexao</button>
+                    <button class="ghost-button" id="cancelAnkiConfigButton" type="button">Cancelar</button>
+                    <button class="primary-button" type="submit">Salvar Anki</button>
                 </div>
             </form>
         </section>
@@ -271,6 +320,73 @@
             </div>
 
             <div class="detail-stack">
+                <section class="detail-panel mvp2-panel">
+                    <div class="panel-header panel-header-rich">
+                        <div>
+                            <p class="eyebrow">MVP2</p>
+                            <h3>Consolidacao assistida</h3>
+                            <p id="manualFlashcardsStatus">Registre os flashcards criados e acompanhe a revisao elastica.</p>
+                        </div>
+                        <span id="manualFlashcardsBadge">Manual</span>
+                    </div>
+                    <form class="inline-form" id="manualFlashcardsForm">
+                        <label class="field">
+                            <span>Quantidade</span>
+                            <input id="manualFlashcardsCountInput" name="quantidade" type="number" min="1" step="1" required>
+                        </label>
+                        <label class="field">
+                            <span>Data de criacao</span>
+                            <input id="manualFlashcardsDateInput" name="dataCriacao" type="date" required>
+                        </label>
+                        <button class="primary-button" id="saveManualFlashcardsButton" type="submit">Registrar</button>
+                    </form>
+                    <div class="review-strip" id="reviewStatus"></div>
+                    <div class="artifact-actions review-actions">
+                        <button class="ghost-button" id="markReviewDoneButton" type="button">Revisao feita</button>
+                        <button class="ghost-button" id="skipReviewButton" type="button">Pular revisao</button>
+                    </div>
+                </section>
+
+                <section class="detail-panel checklist-panel" id="checklistPanel">
+                    <div class="panel-header panel-header-rich">
+                        <div>
+                            <p class="eyebrow">Checklist</p>
+                            <h3>Qualidade dos flashcards</h3>
+                            <p id="checklistStatus">A consolidacao pode seguir incompleta, mas o alerta fica visivel.</p>
+                        </div>
+                        <span id="checklistCount">0/5</span>
+                    </div>
+                    <div class="checklist-list" id="qualityChecklist"></div>
+                </section>
+
+                <section class="detail-panel anki-panel">
+                    <div class="panel-header panel-header-rich">
+                        <div>
+                            <p class="eyebrow">AnkiConnect</p>
+                            <h3>Notas do Anki</h3>
+                            <p id="ankiCardStatus">Crie notas no deck configurado e sincronize mature.</p>
+                        </div>
+                        <span id="ankiCardBadge">Local</span>
+                    </div>
+                    <form class="artifact-form" id="ankiNoteForm">
+                        <div class="artifact-form-grid">
+                            <label class="field">
+                                <span>Frente</span>
+                                <textarea id="ankiFrontInput" name="front" rows="3" required></textarea>
+                            </label>
+                            <label class="field">
+                                <span>Verso</span>
+                                <textarea id="ankiBackInput" name="back" rows="3" required></textarea>
+                            </label>
+                        </div>
+                        <div class="artifact-form-actions">
+                            <button class="ghost-button" id="syncAnkiMatureButton" type="button">Sincronizar mature</button>
+                            <button class="primary-button" type="submit">Criar nota</button>
+                        </div>
+                    </form>
+                    <div class="detail-list anki-notes-list" id="ankiNotesList"></div>
+                </section>
+
                 <section class="detail-panel obsidian-panel">
                     <div class="panel-header panel-header-rich">
                         <div>

@@ -3,6 +3,7 @@ package org.example.flowstudy.studycard.api.dto
 import org.example.flowstudy.studycard.domain.model.StudyCard
 import org.example.flowstudy.studycard.domain.model.enums.Estagio
 import org.example.flowstudy.studycard.domain.model.enums.Prioridade
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 data class StudyCardResponse(
@@ -17,6 +18,13 @@ data class StudyCardResponse(
     val obsidianPath: String?,
     val obsidianNoteCreatedAt: LocalDateTime?,
     val obsidianLastOpenedAt: LocalDateTime?,
+    val manualFlashcardsCount: Int?,
+    val manualFlashcardsCreatedAt: LocalDate?,
+    val manualFlashcardsRegisteredAt: LocalDateTime?,
+    val nextReviewAt: LocalDate?,
+    val reviewIntervalDays: Int,
+    val lastReviewedAt: LocalDateTime?,
+    val reviewSkippedAt: LocalDateTime?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 ) {
@@ -34,6 +42,13 @@ data class StudyCardResponse(
                 obsidianPath = studyCard.obsidianPath,
                 obsidianNoteCreatedAt = studyCard.obsidianNoteCreatedAt,
                 obsidianLastOpenedAt = studyCard.obsidianLastOpenedAt,
+                manualFlashcardsCount = studyCard.manualFlashcardsCount,
+                manualFlashcardsCreatedAt = studyCard.manualFlashcardsCreatedAt,
+                manualFlashcardsRegisteredAt = studyCard.manualFlashcardsRegisteredAt,
+                nextReviewAt = studyCard.nextReviewAt,
+                reviewIntervalDays = studyCard.reviewIntervalDays,
+                lastReviewedAt = studyCard.lastReviewedAt,
+                reviewSkippedAt = studyCard.reviewSkippedAt,
                 createdAt = studyCard.createdAt,
                 updatedAt = studyCard.updatedAt
             )

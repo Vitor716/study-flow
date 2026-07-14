@@ -3,7 +3,9 @@ package org.example.flowstudy.studycard.application.service.impl
 import org.example.flowstudy.studycard.api.dto.StudyCardRequest
 import org.example.flowstudy.studycard.api.dto.StudyCardResponse
 import org.example.flowstudy.studycard.api.dto.toEntity
+import org.example.flowstudy.studycard.application.port.AnkiNoteRepository
 import org.example.flowstudy.studycard.application.port.EvidenciaAtivaRepository
+import org.example.flowstudy.studycard.application.port.FlashcardQualityChecklistRepository
 import org.example.flowstudy.studycard.application.port.RecursoEstudoRepository
 import org.example.flowstudy.studycard.application.port.StageHistoryRepository
 import org.example.flowstudy.studycard.application.port.StudyCardRepository
@@ -16,7 +18,9 @@ class StudyCardService (
     private val repository : StudyCardRepository,
     private val recursoEstudoRepository: RecursoEstudoRepository,
     private val evidenciaAtivaRepository: EvidenciaAtivaRepository,
-    private val stageHistoryRepository: StageHistoryRepository
+    private val stageHistoryRepository: StageHistoryRepository,
+    private val flashcardQualityChecklistRepository: FlashcardQualityChecklistRepository,
+    private val ankiNoteRepository: AnkiNoteRepository
 ) : StudyCardService {
 
 
@@ -56,6 +60,8 @@ class StudyCardService (
         evidenciaAtivaRepository.deleteByCardId(id)
         recursoEstudoRepository.deleteByCardId(id)
         stageHistoryRepository.deleteByCardId(id)
+        flashcardQualityChecklistRepository.deleteByCardId(id)
+        ankiNoteRepository.deleteByCardId(id)
         repository.deleteById(id)
     }
 }

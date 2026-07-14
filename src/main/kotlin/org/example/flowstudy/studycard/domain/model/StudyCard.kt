@@ -3,6 +3,7 @@ package org.example.flowstudy.studycard.domain.model
 import jakarta.persistence.*
 import org.example.flowstudy.studycard.domain.model.enums.Estagio
 import org.example.flowstudy.studycard.domain.model.enums.Prioridade
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
@@ -36,6 +37,27 @@ class StudyCard {
 
     @Column(name = "obsidian_last_opened_at")
     var obsidianLastOpenedAt: LocalDateTime? = null
+
+    @Column(name = "manual_flashcards_count", columnDefinition = "INTEGER")
+    var manualFlashcardsCount: Int? = null
+
+    @Column(name = "manual_flashcards_created_at")
+    var manualFlashcardsCreatedAt: LocalDate? = null
+
+    @Column(name = "manual_flashcards_registered_at")
+    var manualFlashcardsRegisteredAt: LocalDateTime? = null
+
+    @Column(name = "next_review_at")
+    var nextReviewAt: LocalDate? = null
+
+    @Column(name = "review_interval_days", columnDefinition = "INTEGER")
+    var reviewIntervalDays: Int = 3
+
+    @Column(name = "last_reviewed_at")
+    var lastReviewedAt: LocalDateTime? = null
+
+    @Column(name = "review_skipped_at")
+    var reviewSkippedAt: LocalDateTime? = null
 
     @Column(name = "created_at")
     var createdAt: LocalDateTime = LocalDateTime.now()
