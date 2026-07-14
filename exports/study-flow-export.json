@@ -1,0 +1,1130 @@
+{
+  "schemaVersion" : 1,
+  "exportedAt" : "2026-07-14T13:21:50.939265300",
+  "cards" : [ {
+    "id" : 2,
+    "titulo" : "Fundamentos de falhas em sistemas distribuídos",
+    "descricao" : "Estudar os principais tipos de falhas em sistemas distribuídos: falhas transitórias, falhas permanentes, latência alta, indisponibilidade, timeout, erro de rede, falha parcial, saturação e falha em cascata.\n\nProjeto de estudo: criar duas APIs simples: client-api e external-api. A client-api deve chamar a external-api. A external-api deve ter endpoints para simular sucesso, erro 500, lentidão, indisponibilidade e resposta intermitente. O objetivo é observar como uma dependência instável afeta o sistema chamador.\n\nCritérios de conclusão:\n\nCriar endpoints que simulam diferentes tipos de falha.\nRegistrar logs das chamadas.\nMedir tempo de resposta.\nDocumentar quais padrões de resiliência poderiam tratar cada falha.\nEntender por que sistemas distribuídos precisam de timeout, retry, circuit breaker e observabilidade.",
+    "contexto" : "Resiliência",
+    "prioridade" : "ALTA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 17:51:04.863915100",
+    "updated_at" : "2026-07-08 17:51:25.219272400",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 3,
+    "titulo" : "Timeout em chamadas externas",
+    "descricao" : "Estudar como limitar o tempo máximo de espera em chamadas HTTP, banco de dados, cache e mensageria. Entender timeout de conexão, timeout de leitura e timeout da operação inteira.\n\nProjeto de estudo: criar uma orders-api que chama uma payment-api. A payment-api deve ter um endpoint que demora entre 1 e 10 segundos para responder. A orders-api deve configurar timeout de 2 segundos e retornar erro controlado quando a chamada exceder esse limite.\n\nCritérios de conclusão:\n\nConfigurar timeout em chamada HTTP.\nSimular dependência lenta.\nRetornar resposta amigável em caso de timeout.\nRegistrar tempo gasto em cada chamada.\nComparar comportamento com e sem timeout.\nEntender como chamadas sem timeout podem prender recursos da aplicação.",
+    "contexto" : "Resiliência",
+    "prioridade" : "ALTA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 17:58:53.847954100",
+    "updated_at" : "2026-07-08 17:58:59.498597200",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 4,
+    "titulo" : "Retry com backoff e jitter",
+    "descricao" : "Estudar retry simples, retry com intervalo fixo, exponential backoff e jitter. Entender quando retry ajuda e quando pode piorar o problema, causando sobrecarga ou retry storm.\n\nProjeto de estudo: criar uma payment-api que falha aleatoriamente em 50% das chamadas. A orders-api deve tentar novamente até 3 vezes usando exponential backoff. Adicionar jitter para evitar que várias requisições sejam repetidas exatamente ao mesmo tempo.\n\nCritérios de conclusão:\n\nImplementar até 3 tentativas.\nAplicar espera crescente entre tentativas.\nAdicionar jitter.\nLogar cada tentativa.\nRetornar erro final quando todas as tentativas falharem.\nTestar sucesso na primeira tentativa, sucesso após retry e falha total.\nEntender por que retry deve ter limite.",
+    "contexto" : "retry, backoff, jitter, resiliencia, projeto-pratico",
+    "prioridade" : "ALTA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : 1784214266300,
+    "updated_at" : 1784042412415,
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 5,
+    "titulo" : "Idempotência em APIs de pagamento",
+    "descricao" : "Estudar como evitar efeitos duplicados quando uma operação é executada mais de uma vez. Entender a importância de idempotência em operações com retry, principalmente em pagamentos, criação de pedidos, envio de mensagens e processamento assíncrono.\n\nProjeto de estudo: criar um endpoint POST /payments que recebe o header Idempotency-Key. Se a mesma chave for enviada novamente, a API deve retornar o mesmo pagamento criado anteriormente, sem criar outro registro.\n\nCritérios de conclusão:\n\nCriar tabela de pagamentos.\nCriar campo ou tabela para armazenar a chave de idempotência.\nImpedir duplicidade usando constraint única.\nRetornar a mesma resposta para chamadas repetidas.\nSimular falha após criar pagamento, mas antes de responder.\nGarantir que retry não gere pagamento duplicado.",
+    "contexto" : "Resiliência",
+    "prioridade" : "MEDIA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 18:03:46.083947800",
+    "updated_at" : "2026-07-08 18:10:56.954110300",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 6,
+    "titulo" : "Circuit Breaker em dependências externas",
+    "descricao" : "Descrição:\nEstudar o padrão Circuit Breaker e seus estados: closed, open e half-open. Entender como ele evita que a aplicação continue chamando uma dependência que está falhando, reduzindo falhas em cascata.\n\nProjeto de estudo: criar uma catalog-api que chama uma stock-api. A stock-api deve falhar propositalmente em várias chamadas. Quando a quantidade ou taxa de falhas passar de um limite, o circuit breaker deve abrir e a catalog-api deve parar de chamar a stock-api por um tempo.\n\nCritérios de conclusão:\n\nConfigurar circuit breaker.\nSimular falhas consecutivas.\nObservar estados closed, open e half-open.\nRetornar resposta alternativa enquanto o circuito estiver aberto.\nRegistrar logs ou métricas do estado do circuit breaker.\nTestar recuperação quando a stock-api voltar a responder.",
+    "contexto" : "Resiliência",
+    "prioridade" : "ALTA",
+    "estagio" : "CONSOLIDACAO",
+    "order_index" : 0,
+    "obsidian_path" : "04 - CÉREBRO/Circuit Breaker em dependências externas.md",
+    "obsidian_note_created_at" : 1784042218693,
+    "obsidian_last_opened_at" : 1784042223290,
+    "created_at" : 1783823955300,
+    "updated_at" : 1784045004089,
+    "manual_flashcards_count" : 2,
+    "manual_flashcards_created_at" : 1783998000000,
+    "manual_flashcards_registered_at" : 1784045004088,
+    "next_review_at" : 1784862000000,
+    "review_interval_days" : 10,
+    "last_reviewed_at" : 1784045002550,
+    "review_skipped_at" : 1784045000881
+  }, {
+    "id" : 7,
+    "titulo" : "Fallback com resposta alternativa",
+    "descricao" : "Estudar como retornar uma resposta alternativa quando a operação principal falha. Entender fallback com cache, valor padrão, resposta parcial e mensagem amigável.\n\nProjeto de estudo: criar uma product-api que busca preço em uma pricing-api. Se a pricing-api estiver fora ou lenta, a product-api deve retornar o último preço conhecido armazenado em cache ou banco local, indicando que o dado pode estar desatualizado.\n\nCritérios de conclusão:\n\nCriar fluxo principal consultando a pricing-api.\nSalvar último preço conhecido.\nRetornar fallback quando a API externa falhar.\nAdicionar campo indicando que a resposta veio do cache.\nTestar cenário normal, cenário com falha e cenário sem cache.\nEntender quando fallback pode esconder problemas graves.",
+    "contexto" : "Resiliência",
+    "prioridade" : "MEDIA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 18:10:17.481503200",
+    "updated_at" : "2026-07-08 18:10:33.753703800",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 8,
+    "titulo" : "Rate Limiting em APIs",
+    "descricao" : "Estudar como limitar a quantidade de requisições em determinado intervalo de tempo. Entender fixed window, sliding window, token bucket, leaky bucket, limite por usuário, limite por IP e resposta HTTP 429.\n\nProjeto de estudo: criar uma API de login com limite de 5 tentativas por minuto por usuário. Quando o usuário ultrapassar o limite, a API deve retornar 429 Too Many Requests com uma mensagem clara e tempo aproximado para nova tentativa.\n\nCritérios de conclusão:\n\nImplementar limite por usuário.\nArmazenar contagem em memória ou Redis.\nRetornar HTTP 429 ao ultrapassar o limite.\nInformar tempo aproximado para tentar novamente.\nTestar múltiplos usuários.\nTestar reset do limite após o intervalo.\nEntender diferença entre proteção contra abuso e proteção contra sobrecarga.",
+    "contexto" : "rate-limit, api, seguranca, resiliencia, projeto-pratico",
+    "prioridade" : "MEDIA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : 1784330255900,
+    "updated_at" : 1784042390778,
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 9,
+    "titulo" : "Dead Letter Queue para mensagens com erro",
+    "descricao" : "Estudar como lidar com mensagens que não conseguem ser processadas após várias tentativas. Entender retry em consumidores, poison messages, número máximo de tentativas, Dead Letter Queue e reprocessamento manual.\n\nProjeto de estudo: criar uma fila de pedidos. O consumidor deve processar mensagens válidas e falhar em mensagens inválidas. Após 3 tentativas, a mensagem deve ser enviada para uma Dead Letter Queue. Criar também um endpoint ou script para listar e reprocessar mensagens da DLQ.\n\nCritérios de conclusão:\n\nCriar fila principal.\nCriar DLQ.\nImplementar retry no consumidor.\nEnviar mensagem para DLQ após limite de tentativas.\nCriar mecanismo de reprocessamento.\nRegistrar motivo da falha.\nTestar mensagem válida, inválida e corrigida para reprocessamento.",
+    "contexto" : "Resiliência",
+    "prioridade" : "ALTA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 18:13:56.534794900",
+    "updated_at" : "2026-07-08 18:13:58.529376900",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 10,
+    "titulo" : "Health Checks: liveness e readiness",
+    "descricao" : "Estudar endpoints de saúde da aplicação. Entender a diferença entre liveness, readiness e startup checks. Aprender quando verificar apenas a aplicação e quando verificar dependências externas como banco, cache e filas.\n\nProjeto de estudo: criar endpoints /health/live e /health/ready. O /health/live deve indicar se a aplicação está viva. O /health/ready deve verificar banco de dados, Redis e fila. Se alguma dependência crítica estiver fora, a aplicação deve indicar que não está pronta.\n\nCritérios de conclusão:\n\nCriar endpoint de liveness.\nCriar endpoint de readiness.\nVerificar banco de dados.\nVerificar cache ou fila.\nSimular dependência indisponível.\nEntender quando a aplicação deve ou não receber tráfego.\nEntender que readiness falhando não é a mesma coisa que aplicação morta.",
+    "contexto" : "Resiliência",
+    "prioridade" : "ALTA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 18:15:00.905572100",
+    "updated_at" : "2026-07-08 18:15:04.510430600",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 11,
+    "titulo" : "Observabilidade para sistemas resilientes",
+    "descricao" : "Estudar logs, métricas e traces para entender o comportamento do sistema em cenários de falha. Aprender a medir latência, taxa de erro, timeouts, retries, circuit breaker, mensagens em DLQ, saturação e throughput.\n\nProjeto de estudo: adicionar observabilidade aos projetos anteriores. Instrumentar APIs com logs estruturados, request ID, métricas de latência, contadores de erro, quantidade de retries e estado do circuit breaker. Criar um dashboard simples no Grafana.\n\nCritérios de conclusão:\n\nAdicionar logs estruturados.\nPropagar request ID entre serviços.\nColetar métricas com Prometheus.\nCriar dashboard no Grafana.\nMedir p95 e p99 de latência.\nVisualizar erros, retries, timeouts e circuit breaker.\nConseguir investigar uma falha usando logs e métricas.",
+    "contexto" : "Resiliência",
+    "prioridade" : "ALTA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 18:16:19.111207",
+    "updated_at" : "2026-07-08 18:16:20.641453500",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 12,
+    "titulo" : "Mensageria resiliente com eventos",
+    "descricao" : "Estudar filas, pub/sub, eventos, consumidores, retry, DLQ, idempotência e consistência eventual. Entender como mensageria ajuda a desacoplar serviços e aumentar tolerância a falhas.\n\nProjeto de estudo: criar um fluxo de pedido baseado em eventos. A order-api cria um pedido e publica o evento OrderCreated. O payment-worker processa pagamento, o stock-worker reserva estoque e o notification-worker envia notificação. Cada consumidor deve ter retry, idempotência e DLQ.\n\nCritérios de conclusão:\n\nCriar evento OrderCreated.\nCriar consumidores separados.\nImplementar retry por consumidor.\nImplementar DLQ.\nGarantir idempotência no processamento.\nSimular falha em pagamento, estoque e notificação.\nObservar consistência eventual do pedido.",
+    "contexto" : "Resiliência",
+    "prioridade" : "ALTA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : "2026-07-08 18:17:33.611468400",
+    "updated_at" : "2026-07-08 18:17:35.531251300",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 13,
+    "titulo" : "tese",
+    "descricao" : null,
+    "contexto" : "Geral",
+    "prioridade" : "MEDIA",
+    "estagio" : "TRIAGEM",
+    "order_index" : 0,
+    "obsidian_path" : "04 - CEREBRO/tese.md",
+    "obsidian_note_created_at" : "2026-07-14 12:06:41.447830900",
+    "obsidian_last_opened_at" : "2026-07-14 12:06:05.563530600",
+    "created_at" : 1784041402526,
+    "updated_at" : "2026-07-14 12:06:42.394451300",
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 14,
+    "titulo" : "teste",
+    "descricao" : null,
+    "contexto" : "Geral",
+    "prioridade" : "MEDIA",
+    "estagio" : "ESTUDO_ATIVO",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : 1784041917809,
+    "updated_at" : 1784041920663,
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 15,
+    "titulo" : "tese",
+    "descricao" : null,
+    "contexto" : "Geral",
+    "prioridade" : "MEDIA",
+    "estagio" : "ESTUDO_ATIVO",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : 1784041927765,
+    "updated_at" : 1784041931765,
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  }, {
+    "id" : 16,
+    "titulo" : "teste",
+    "descricao" : null,
+    "contexto" : "Geral",
+    "prioridade" : "MEDIA",
+    "estagio" : "ESTUDO_ATIVO",
+    "order_index" : 0,
+    "obsidian_path" : null,
+    "obsidian_note_created_at" : null,
+    "obsidian_last_opened_at" : null,
+    "created_at" : 1784041965797,
+    "updated_at" : 1784041967866,
+    "manual_flashcards_count" : null,
+    "manual_flashcards_created_at" : null,
+    "manual_flashcards_registered_at" : null,
+    "next_review_at" : null,
+    "review_interval_days" : 3,
+    "last_reviewed_at" : null,
+    "review_skipped_at" : null
+  } ],
+  "tags" : [ {
+    "card_id" : 2,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "LINGUAGEM",
+    "valor" : "SQL",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Docker",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "TIPO",
+    "valor" : "fundamentos",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "TIPO",
+    "valor" : "sistemas-distribuidos",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "TIPO",
+    "valor" : "backend",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 2,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 17:51:04.863915100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Docker",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "TIPO",
+    "valor" : "timeout",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "TIPO",
+    "valor" : "backend",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "TIPO",
+    "valor" : "http-client",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 3,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 17:58:53.847954100"
+  }, {
+    "card_id" : 4,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : 1784042412412
+  }, {
+    "card_id" : 4,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : 1784042412413
+  }, {
+    "card_id" : 4,
+    "categoria" : "TIPO",
+    "valor" : "Resiliência",
+    "created_at" : 1784042412413
+  }, {
+    "card_id" : 5,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "LINGUAGEM",
+    "valor" : "SQL",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "LINGUAGEM",
+    "valor" : "PostgreSQL",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "TIPO",
+    "valor" : "idempotencia",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "TIPO",
+    "valor" : "api",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "TIPO",
+    "valor" : "pagamentos",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "TIPO",
+    "valor" : "retry",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 5,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 18:10:56.961253800"
+  }, {
+    "card_id" : 6,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 6,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 6,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Resilience4j",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 6,
+    "categoria" : "TIPO",
+    "valor" : "circuit-breaker",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 6,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 6,
+    "categoria" : "TIPO",
+    "valor" : "microsservicos",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 6,
+    "categoria" : "TIPO",
+    "valor" : "backend",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 6,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 18:10:27.797407700"
+  }, {
+    "card_id" : 7,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Redis",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "LINGUAGEM",
+    "valor" : "SQL",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "TIPO",
+    "valor" : "fallback",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "TIPO",
+    "valor" : "cache",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "TIPO",
+    "valor" : "graceful-degradation",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 7,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 18:10:17.482717"
+  }, {
+    "card_id" : 8,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : 1784042390761
+  }, {
+    "card_id" : 8,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : 1784042390773
+  }, {
+    "card_id" : 8,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Redis",
+    "created_at" : 1784042390773
+  }, {
+    "card_id" : 8,
+    "categoria" : "TIPO",
+    "valor" : "Resiliência",
+    "created_at" : 1784042390773
+  }, {
+    "card_id" : 9,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "LINGUAGEM",
+    "valor" : "RabbitMQ",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Docker",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "TIPO",
+    "valor" : "dlq",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "TIPO",
+    "valor" : "dead-letter-queue",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "TIPO",
+    "valor" : "mensageria",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "TIPO",
+    "valor" : "retry",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 9,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 18:13:56.536791700"
+  }, {
+    "card_id" : 10,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kubernetes",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Docker",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "TIPO",
+    "valor" : "health-check",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "TIPO",
+    "valor" : "liveness",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "TIPO",
+    "valor" : "readiness",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "TIPO",
+    "valor" : "kubernetes",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "TIPO",
+    "valor" : "operacao",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 10,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 18:15:00.906078600"
+  }, {
+    "card_id" : 11,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Spring Boot",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "LINGUAGEM",
+    "valor" : "OpenTelemetry",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Prometheus",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Grafana",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "TIPO",
+    "valor" : "observabilidade",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "TIPO",
+    "valor" : "metricas",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "TIPO",
+    "valor" : "tracing",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "TIPO",
+    "valor" : "logs",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 11,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 18:16:19.111207"
+  }, {
+    "card_id" : 12,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kotlin",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "LINGUAGEM",
+    "valor" : "RabbitMQ",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Kafka",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "LINGUAGEM",
+    "valor" : "SQL",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "LINGUAGEM",
+    "valor" : "Docker",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "TIPO",
+    "valor" : "mensageria",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "TIPO",
+    "valor" : "eventos",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "TIPO",
+    "valor" : "filas",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "TIPO",
+    "valor" : "microsservicos",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "TIPO",
+    "valor" : "resiliencia",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 12,
+    "categoria" : "TIPO",
+    "valor" : "projeto-pratico",
+    "created_at" : "2026-07-08 18:17:33.612468500"
+  }, {
+    "card_id" : 13,
+    "categoria" : "TIPO",
+    "valor" : "teste",
+    "created_at" : 1784041402556
+  }, {
+    "card_id" : 15,
+    "categoria" : "TIPO",
+    "valor" : "tese",
+    "created_at" : 1784041927768
+  }, {
+    "card_id" : 16,
+    "categoria" : "TIPO",
+    "valor" : "teste",
+    "created_at" : 1784041965799
+  } ],
+  "stageHistory" : [ {
+    "id" : 1,
+    "card_id" : 2,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 17:51:25.219272400",
+    "updated_at" : "2026-07-08 17:51:25.219272400"
+  }, {
+    "id" : 2,
+    "card_id" : 3,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 17:58:59.498597200",
+    "updated_at" : "2026-07-08 17:58:59.498597200"
+  }, {
+    "id" : 3,
+    "card_id" : 4,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:01:57.625320800",
+    "updated_at" : "2026-07-08 18:01:57.625320800"
+  }, {
+    "id" : 4,
+    "card_id" : 5,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:03:47.702789800",
+    "updated_at" : "2026-07-08 18:03:47.702789800"
+  }, {
+    "id" : 5,
+    "card_id" : 6,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "REFINAMENTO",
+    "razao" : "",
+    "created_at" : 1784390436100,
+    "updated_at" : 1784044600081
+  }, {
+    "id" : 6,
+    "card_id" : 7,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:10:33.753703800",
+    "updated_at" : "2026-07-08 18:10:33.753703800"
+  }, {
+    "id" : 7,
+    "card_id" : 8,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:11:48.855478800",
+    "updated_at" : "2026-07-08 18:11:48.855478800"
+  }, {
+    "id" : 8,
+    "card_id" : 9,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:13:58.529376900",
+    "updated_at" : "2026-07-08 18:13:58.529376900"
+  }, {
+    "id" : 9,
+    "card_id" : 10,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:15:04.510430600",
+    "updated_at" : "2026-07-08 18:15:04.510430600"
+  }, {
+    "id" : 10,
+    "card_id" : 11,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:16:20.641453500",
+    "updated_at" : "2026-07-08 18:16:20.641453500"
+  }, {
+    "id" : 11,
+    "card_id" : 12,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "TRIAGEM",
+    "razao" : "",
+    "created_at" : "2026-07-08 18:17:35.531251300",
+    "updated_at" : "2026-07-08 18:17:35.531251300"
+  }, {
+    "id" : 12,
+    "card_id" : 14,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "ESTUDO_ATIVO",
+    "razao" : "",
+    "created_at" : 1784041920657,
+    "updated_at" : 1784041920657
+  }, {
+    "id" : 13,
+    "card_id" : 15,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "ESTUDO_ATIVO",
+    "razao" : "",
+    "created_at" : 1784041931763,
+    "updated_at" : 1784041931763
+  }, {
+    "id" : 14,
+    "card_id" : 16,
+    "from_stage" : "TRIAGEM",
+    "to_stage" : "ESTUDO_ATIVO",
+    "razao" : "",
+    "created_at" : 1784041967861,
+    "updated_at" : 1784041967861
+  } ],
+  "resources" : [ {
+    "id" : 1,
+    "card_id" : 2,
+    "tipo" : "ARTIGO",
+    "titulo" : "Azure — padrões de arquitetura para confiabilidade, cobrindo disponibilidade, recuperação, integridade de dados/processamento e contenção de",
+    "url" : "https://learn.microsoft.com/en-us/azure/well-architected/reliability/design-patterns?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 17:57:15.529241",
+    "updated_at" : "2026-07-08 17:57:15.529241"
+  }, {
+    "id" : 2,
+    "card_id" : 2,
+    "tipo" : "ARTIGO",
+    "titulo" : "Martin Fowler — guia de microsserviços, explicando serviços pequenos, independentes e comunicação leve entre processos",
+    "url" : "https://martinfowler.com/microservices/?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 17:57:34.449874700",
+    "updated_at" : "2026-07-08 17:57:58.213278400"
+  }, {
+    "id" : 3,
+    "card_id" : 2,
+    "tipo" : "ARTIGO",
+    "titulo" : "Microservices.io — guia de padrões para microsserviços e sistemas distribuídos.",
+    "url" : "https://microservices.io/?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 17:58:10.538385600",
+    "updated_at" : "2026-07-08 17:58:10.538385600"
+  }, {
+    "id" : 4,
+    "card_id" : 3,
+    "tipo" : "ARTIGO",
+    "titulo" : "AWS Builders Library em português — explica timeouts, retries, backoff e jitter em sistemas distribuídos.",
+    "url" : "https://aws.amazon.com/pt/builders-library/timeouts-retries-and-backoff-with-jitter/?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 17:59:29.731927300",
+    "updated_at" : "2026-07-08 17:59:29.731927300"
+  }, {
+    "id" : 5,
+    "card_id" : 3,
+    "tipo" : "ARTIGO",
+    "titulo" : "Codecentric — artigo sobre Retry, Fallback, Timeout e Circuit Breaker.",
+    "url" : "https://medium.com/%40alxkm/building-resilient-spring-boot-applications-with-resilience4j-cf8e5e7c2700",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:00:04.986473400",
+    "updated_at" : "2026-07-08 18:00:04.986473400"
+  }, {
+    "id" : 6,
+    "card_id" : 4,
+    "tipo" : "ARTIGO",
+    "titulo" : "AWS Builders Library em português — material muito bom sobre timeouts, retries, backoff e jitter.",
+    "url" : "https://aws.amazon.com/pt/builders-library/timeouts-retries-and-backoff-with-jitter/?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:02:28.018130300",
+    "updated_at" : "2026-07-08 18:02:28.018130300"
+  }, {
+    "id" : 7,
+    "card_id" : 4,
+    "tipo" : "ARTIGO",
+    "titulo" : "Azure Retry Storm Antipattern — explica como retries mal configurados podem gerar tempestades de repetição e piorar incidentes.",
+    "url" : "https://learn.microsoft.com/en-us/azure/architecture/antipatterns/retry-storm/?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:02:45.473311500",
+    "updated_at" : "2026-07-08 18:02:45.473311500"
+  }, {
+    "id" : 8,
+    "card_id" : 4,
+    "tipo" : "ARTIGO",
+    "titulo" : "Resilience4j — fornece módulo de Retry e permite combinar vários decorators de tolerância a falhas.",
+    "url" : "https://resilience4j.readme.io/docs/retry",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:03:06.707669800",
+    "updated_at" : "2026-07-08 18:03:06.707669800"
+  }, {
+    "id" : 9,
+    "card_id" : 6,
+    "tipo" : "ARTIGO",
+    "titulo" : "Microsoft Learn em português — Padrão Circuit Breaker, explicando diferença entre retry e circuit breaker.",
+    "url" : "https://learn.microsoft.com/pt-br/azure/architecture/patterns/circuit-breaker?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:06:18.220193400",
+    "updated_at" : "2026-07-08 18:06:43.639193500"
+  }, {
+    "id" : 10,
+    "card_id" : 6,
+    "tipo" : "ARTIGO",
+    "titulo" : "Martin Fowler — artigo clássico sobre Circuit Breaker.",
+    "url" : "https://martinfowler.com/bliki/CircuitBreaker.html?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:06:36.518167400",
+    "updated_at" : "2026-07-08 18:06:36.518167400"
+  }, {
+    "id" : 11,
+    "card_id" : 6,
+    "tipo" : "VIDEO",
+    "titulo" : "Resilience4j CircuitBreaker — documentação prática da biblioteca.",
+    "url" : "https://resilience4j.readme.io/docs/circuitbreaker",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:06:59.470863100",
+    "updated_at" : "2026-07-08 18:06:59.470863100"
+  }, {
+    "id" : 12,
+    "card_id" : 6,
+    "tipo" : "VIDEO",
+    "titulo" : "Training Center — artigo em português sobre Circuit Breaker em microsserviços.",
+    "url" : "https://medium.com/trainingcenter/design-pattern-para-microservices-circuit-breaker-f4a5b68f73d1",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:07:14.290806600",
+    "updated_at" : "2026-07-08 18:07:14.290806600"
+  }, {
+    "id" : 13,
+    "card_id" : 8,
+    "tipo" : "VIDEO",
+    "titulo" : "Resilience4j — possui módulo RateLimiter para limitar chamadas",
+    "url" : "https://resilience4j.readme.io/docs/ratelimiter",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:12:08.320950",
+    "updated_at" : "2026-07-08 18:12:08.320950"
+  }, {
+    "id" : 21,
+    "card_id" : 8,
+    "tipo" : "VIDEO",
+    "titulo" : "rate limit",
+    "url" : "https://app.hub.la/m/P0yyewR9nMptKS9XN9YK/p/P94Ks7q9",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:20:03.007320900",
+    "updated_at" : "2026-07-08 18:20:03.007320900"
+  }, {
+    "id" : 14,
+    "card_id" : 9,
+    "tipo" : "ARTIGO",
+    "titulo" : "RabbitMQ Dead Letter Exchanges — documentação oficial sobre mensagens dead-lettered e republicação para exchanges específicas.",
+    "url" : "https://www.rabbitmq.com/docs/dlx?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:14:13.397485800",
+    "updated_at" : "2026-07-08 18:14:13.397485800"
+  }, {
+    "id" : 15,
+    "card_id" : 9,
+    "tipo" : "ARTIGO",
+    "titulo" : "RabbitMQ blog — At-Least-Once Dead Lettering, material mais avançado sobre segurança no dead-lettering",
+    "url" : "https://www.rabbitmq.com/blog/2022/03/29/at-least-once-dead-lettering?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:14:37.404011300",
+    "updated_at" : "2026-07-08 18:14:37.404011300"
+  }, {
+    "id" : 16,
+    "card_id" : 10,
+    "tipo" : "VIDEO",
+    "titulo" : "Kubernetes — documentação oficial sobre Liveness, Readiness e Startup Probes.",
+    "url" : "https://kubernetes.io/docs/concepts/workloads/pods/probes/?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:15:19.664889",
+    "updated_at" : "2026-07-08 18:15:19.664889"
+  }, {
+    "id" : 17,
+    "card_id" : 10,
+    "tipo" : "ARTIGO",
+    "titulo" : "Spring Blog — Liveness and Readiness Probes with Spring Boot.",
+    "url" : "https://spring.io/blog/2020/03/25/liveness-and-readiness-probes-with-spring-boot?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:15:46.949341400",
+    "updated_at" : "2026-07-08 18:15:46.949341400"
+  }, {
+    "id" : 18,
+    "card_id" : 11,
+    "tipo" : "ARTIGO",
+    "titulo" : "O que é o OpenTelemetry?",
+    "url" : "https://www.elastic.co/pt/what-is/opentelemetry?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:16:32.534911400",
+    "updated_at" : "2026-07-08 18:16:36.615387900"
+  }, {
+    "id" : 19,
+    "card_id" : 11,
+    "tipo" : "ARTIGO",
+    "titulo" : "Google Cloud em português — coleta de métricas e traces usando OpenTelemetry Protocol.",
+    "url" : null,
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:16:50.642085400",
+    "updated_at" : "2026-07-08 18:16:50.642085400"
+  }, {
+    "id" : 20,
+    "card_id" : 12,
+    "tipo" : "ARTIGO",
+    "titulo" : "RabbitMQ — documentação oficial do broker e seus protocolos.",
+    "url" : "https://www.rabbitmq.com/?utm_source=chatgpt.com",
+    "observacoes" : null,
+    "created_at" : "2026-07-08 18:17:51.175775400",
+    "updated_at" : "2026-07-08 18:17:51.175775400"
+  } ],
+  "evidence" : [ ],
+  "ankiNotes" : [ {
+    "id" : 1,
+    "card_id" : 6,
+    "note_id" : 1784044971687,
+    "card_ids" : null,
+    "deck_name" : "Study Flow",
+    "model_name" : "Básico",
+    "front" : "Circuit Breaker em dependências externas",
+    "back" : "Descrição:\nEstudar o padrão Circuit Breaker e seus estados: closed, open e half-open. Entender como ele evita que a aplicação continue chamando uma dependência que está falhando, reduzindo falhas em cascata.\n\nProjeto de estudo: criar uma catalog-api que chama uma stock-api. A stock-api deve falhar propositalmente em várias chamadas. Quando a quantidade ou taxa de falhas passar de um limite, o circuit breaker deve abrir e a catalog-api deve parar de chamar a stock-api por um tempo.\n\nCritérios de conclusão:\n\nConfigurar circuit breaker.\nSimular falhas consecutivas.\nObservar estados closed, open e half-open.\nRetornar resposta alternativa enquanto o circuito estiver aberto.\nRegistrar logs ou métricas do estado do circuit breaker.\nTestar recuperação quando a stock-api voltar a responder.",
+    "last_known_interval_days" : null,
+    "mature" : 0,
+    "created_at" : 1784044971719,
+    "updated_at" : 1784044971719
+  } ],
+  "ankiConfig" : [ {
+    "id" : 1,
+    "deck_name" : "Study Flow",
+    "model_name" : "Basic",
+    "mature_threshold_days" : 21,
+    "auto_absorb_mature" : 0,
+    "daily_review_limit" : 8,
+    "created_at" : "2026-07-14 15:30:55",
+    "updated_at" : "2026-07-14 15:30:55"
+  } ],
+  "systemConfig" : [ {
+    "key" : "backup.githubRemoteUrl",
+    "value" : "https://github.com/Vitor716/testeteste.git",
+    "created_at" : "2026-07-14 13:21:44.511",
+    "updated_at" : "2026-07-14 13:21:44.511"
+  }, {
+    "key" : "obsidian.notesFolder",
+    "value" : "04 - CÉREBRO",
+    "created_at" : "2026-07-14 14:54:10",
+    "updated_at" : "2026-07-14T12:11:52.520040100"
+  }, {
+    "key" : "obsidian.vaultName",
+    "value" : "Main notes",
+    "created_at" : "2026-07-14 14:54:10",
+    "updated_at" : "2026-07-14T12:11:52.520040100"
+  }, {
+    "key" : "obsidian.vaultPath",
+    "value" : "C:\\Users\\Vitor\\Documents\\Obsidian Vault\\Main notes",
+    "created_at" : "2026-07-14 14:54:10",
+    "updated_at" : "2026-07-14T12:11:52.520040100"
+  } ]
+}
